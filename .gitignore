@@ -1,0 +1,15 @@
+# Runtime artifacts
+run.log
+*.log
+*.bak
+*.broken-*.bak
+
+# App data (lives in %APPDATA%, never committed)
+data.json
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
