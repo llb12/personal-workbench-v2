@@ -46,16 +46,22 @@ function readData() {
 
 function writeData(data) {
   try {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { ok: false, error: '保存失败：数据结构无效' };
+    }
     const f = dataFile();
     const dir = path.dirname(f);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     // 原子写：先写临时文件再改名，避免写一半掉电导致 JSON 损坏
-    const tmp = f + '.tmp';
+    const tmp = f + '.tmp-' + process.pid;
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
     fs.renameSync(tmp, f);
-    return true;
+    return { ok: true };
   } catch (e) {
-    return false;
+    return {
+      ok: false,
+      error: '保存失败：' + (e && e.message ? e.message : '未知错误')
+    };
   }
 }
 
@@ -65,8 +71,8 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1300,
     height: 920,
-    minWidth: 1080,
-    minHeight: 760,
+    minWidth: 520,
+    minHeight: 440,
     backgroundColor: '#eef1f5',
     transparent: false,
     autoHideMenuBar: true,
@@ -81,16 +87,6 @@ function createWindow() {
 
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, 'index.html'));
-
-  win.webContents.on('did-finish-load', () => {
-    try {
-      fs.writeFileSync(
-        path.join(__dirname, 'run.log'),
-        'ok ' + new Date().toISOString() + '\n',
-        'utf8'
-      );
-    } catch (_) { /* ignore */ }
-  });
 
   win.on('closed', () => { win = null; });
 }
@@ -109,7 +105,7 @@ app.on('window-all-closed', () => {
 // ---- IPC ----
 ipcMain.handle('load-data', () => readData());
 
-ipcMain.on('save-data', (_evt, data) => { writeData(data); });
+ipcMain.handle('save-data', (_evt, data) => writeData(data));
 
 ipcMain.handle('export-data', async (_evt, data) => {
   const stamp = new Date();
@@ -132,6 +128,88 @@ ipcMain.handle('export-data', async (_evt, data) => {
   }
 });
 
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isDateOrEmpty(value) {
+  return value === null || value === undefined || value === '' ||
+    (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function validateImportData(obj) {
+  if (!isPlainObject(obj)) {
+    return '根节点必须是 JSON 对象';
+  }
+
+  const known = [
+    'todos', 'projects', 'events', 'note', 'kanban', 'theme', 'profile',
+    'accent', 'layout', 'noteSample', 'city', 'weather', 'geo',
+    'bgPreset', 'bgCustom', 'focusId', 'snap'
+  ];
+  if (!known.some(key => Object.prototype.hasOwnProperty.call(obj, key))) {
+    return '文件中没有可识别的工作台数据';
+  }
+
+  if (obj.todos !== undefined) {
+    if (!Array.isArray(obj.todos)) return 'todos 必须是数组';
+    if (obj.todos.length > 100000) return 'todos 数量超过允许上限';
+    for (let i = 0; i < obj.todos.length; i += 1) {
+      const t = obj.todos[i];
+      if (!isPlainObject(t)) return 'todos[' + i + '] 必须是对象';
+      if (t.text !== undefined && typeof t.text !== 'string') {
+        return 'todos[' + i + '].text 必须是字符串';
+      }
+      if (t.pri !== undefined && !['high', 'mid', 'low'].includes(t.pri)) {
+        return 'todos[' + i + '].pri 无效';
+      }
+      if (!isDateOrEmpty(t.due)) return 'todos[' + i + '].due 日期格式无效';
+      if (t.done !== undefined && typeof t.done !== 'boolean') {
+        return 'todos[' + i + '].done 必须是布尔值';
+      }
+      if (t.blocked !== undefined && typeof t.blocked !== 'boolean') {
+        return 'todos[' + i + '].blocked 必须是布尔值';
+      }
+    }
+  }
+
+  if (obj.projects !== undefined) {
+    if (!Array.isArray(obj.projects)) return 'projects 必须是数组';
+    if (obj.projects.length > 10000) return 'projects 数量超过允许上限';
+    for (let i = 0; i < obj.projects.length; i += 1) {
+      const p = obj.projects[i];
+      if (!isPlainObject(p)) return 'projects[' + i + '] 必须是对象';
+      if (p.name !== undefined && typeof p.name !== 'string') {
+        return 'projects[' + i + '].name 必须是字符串';
+      }
+      if (!isDateOrEmpty(p.due)) return 'projects[' + i + '].due 日期格式无效';
+    }
+  }
+
+  if (obj.events !== undefined) {
+    if (!isPlainObject(obj.events)) return 'events 必须是对象';
+    for (const key of Object.keys(obj.events)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return 'events 中包含无效日期键：' + key;
+      if (!Array.isArray(obj.events[key])) return 'events.' + key + ' 必须是数组';
+      for (let i = 0; i < obj.events[key].length; i += 1) {
+        const event = obj.events[key][i];
+        if (typeof event !== 'string' && !isPlainObject(event)) {
+          return 'events.' + key + '[' + i + '] 必须是字符串或对象';
+        }
+        if (isPlainObject(event) && event.text !== undefined && typeof event.text !== 'string') {
+          return 'events.' + key + '[' + i + '].text 必须是字符串';
+        }
+      }
+    }
+  }
+
+  if (obj.note !== undefined && typeof obj.note !== 'string') return 'note 必须是字符串';
+  if (obj.layout !== undefined && obj.layout !== null && !isPlainObject(obj.layout)) {
+    return 'layout 必须是对象';
+  }
+  return null;
+}
+
 ipcMain.handle('import-data', async () => {
   const res = await dialog.showOpenDialog(win, {
     title: '导入备份',
@@ -141,13 +219,28 @@ ipcMain.handle('import-data', async () => {
   if (res.canceled || !res.filePaths || !res.filePaths[0]) return null;
   try {
     const raw = fs.readFileSync(res.filePaths[0], 'utf8');
-    const obj = JSON.parse(raw);
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-      return { error: '文件格式不正确，不是有效的工作台备份' };
+    if (Buffer.byteLength(raw, 'utf8') > 20 * 1024 * 1024) {
+      return { error: '导入失败：文件超过 20 MB' };
     }
-    return { data: obj };
+    const obj = JSON.parse(raw);
+    const validationError = validateImportData(obj);
+    if (validationError) {
+      return { error: '文件结构不正确：' + validationError };
+    }
+
+    const current = dataFile();
+    let backupPath = null;
+    if (fs.existsSync(current)) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      backupPath = current + '.before-import-' + stamp + '.bak';
+      fs.copyFileSync(current, backupPath);
+    }
+    return { data: obj, backupPath };
   } catch (e) {
-    return { error: '文件解析失败：' + (e && e.message ? e.message : '未知错误') };
+    if (e instanceof SyntaxError) {
+      return { error: '文件解析失败：不是有效的 JSON' };
+    }
+    return { error: '导入失败：' + (e && e.message ? e.message : '未知错误') };
   }
 });
 
