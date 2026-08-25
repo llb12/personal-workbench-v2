@@ -1,0 +1,11 @@
+{
+  "name": "personal-workbench",
+  "version": "1.0.0",
+  "description": "Personal Workbench - local-first desktop workbench",
+  "main": "main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron ."
+  }
+}
