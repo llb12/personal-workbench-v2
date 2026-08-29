@@ -841,29 +841,32 @@ body:not(.core-view) .core-shell{display:none}
 }
 
 /* ===== V2 日常执行台 ===== */
-body.v2-view .main{padding:20px 24px 24px;gap:0;overflow:hidden;background:
+body.v2-view .main{padding:16px 22px 18px;gap:0;overflow:hidden;background:
   radial-gradient(circle at 78% 8%,color-mix(in srgb,var(--primary-soft) 78%,transparent),transparent 31%),
   linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%,var(--primary-soft)))}
 body.v2-view #banner,body.v2-view #topband,body.v2-view #corePanel,body.v2-view #editbar,body.v2-view .grid{display:none!important}
 body:not(.v2-view) #v2Panel{display:none!important}
-.v2-shell{display:flex;flex:1;min-height:0;flex-direction:column;gap:14px;overflow:auto;scrollbar-gutter:stable;padding-right:2px}
+.v2-shell{display:flex;flex:1;min-height:0;flex-direction:column;gap:10px;overflow:auto;scrollbar-gutter:stable;padding-right:2px}
 .v2-pagehead{display:flex;align-items:center;justify-content:space-between;gap:20px;flex:none;padding:0 2px}
 .v2-heading{min-width:0}
 .v2-title-line{display:flex;align-items:baseline;gap:10px}
 .v2-pagehead h1{font-family:"Noto Sans SC","Microsoft YaHei",sans-serif;font-size:23px;line-height:1.25;letter-spacing:-.4px;font-weight:760}
 .v2-pagehead p{color:var(--muted);font-size:11.5px;margin-top:3px;max-width:680px}
 .v2-page-date{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.v2-status{display:flex;align-items:center;gap:10px;flex:none;min-height:34px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding:0 2px 11px}
-.v2-status b{color:var(--text);font-size:14px;margin-right:3px;font-weight:750;font-variant-numeric:tabular-nums}
-.v2-status i{width:3px;height:3px;background:var(--muted2);border-radius:50%;opacity:.75}
-.v2-status span:first-child b{color:var(--primary)}
+.v2-status{display:flex;align-items:center;gap:0;flex:none;min-height:32px;color:var(--muted);font-size:11.5px;border-bottom:1px solid var(--line);padding:0 2px 9px;flex-wrap:wrap}
+.v2-status-item{display:inline-flex;align-items:baseline;gap:2px;min-height:30px;padding:3px 7px;border-radius:7px;color:var(--muted);font-size:11.5px;transition:background .14s,color .14s}
+.v2-status-item:hover{background:var(--primary-soft);color:var(--primary)}
+.v2-status-item:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.v2-status-item b{color:var(--text);font-size:13.5px;margin-right:2px;font-weight:750;font-variant-numeric:tabular-nums}
+.v2-status-item:first-of-type b{color:var(--primary)}
+.v2-status i{width:3px;height:3px;background:var(--muted2);border-radius:50%;opacity:.75;margin:0 3px}
 .v2-content{flex:1;min-height:0;padding-top:1px}
-.v2-home-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.9fr);gap:12px 14px;align-items:start}
+.v2-home-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.9fr);gap:10px 14px;align-items:start}
 .v2-home-done{grid-column:1/-1}
-.v2-card{background:color-mix(in srgb,var(--card) 96%,transparent);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0;overflow:hidden}
-.v2-card.primary{border-color:color-mix(in srgb,var(--primary) 34%,var(--line));box-shadow:0 7px 25px color-mix(in srgb,var(--primary) 11%,transparent)}
-.v2-card-head{display:flex;align-items:center;gap:9px;padding:14px 16px 11px;border-bottom:1px solid var(--line2)}
-.v2-home-grid .v2-card-head{padding:12px 16px 9px}
+.v2-card{background:color-mix(in srgb,var(--card) 96%,transparent);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(16,30,54,.05),0 5px 16px rgba(16,30,54,.035);min-width:0;overflow:hidden}
+.v2-card.primary{border-color:color-mix(in srgb,var(--primary) 38%,var(--line));box-shadow:0 2px 4px color-mix(in srgb,var(--primary) 8%,transparent),0 8px 22px color-mix(in srgb,var(--primary) 9%,transparent)}
+.v2-card-head{display:flex;align-items:center;gap:9px;padding:12px 16px 9px;border-bottom:1px solid var(--line2)}
+.v2-home-grid .v2-card-head{padding:11px 16px 8px}
 .v2-card-head h2{font-size:14px;font-weight:760;letter-spacing:.1px}
 .v2-card-head p{font-size:11px;color:var(--muted);margin-left:1px}
 .v2-card-head .v2-head-action{margin-left:auto}
@@ -873,24 +876,27 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-card-body{padding:0}
 .v2-head-action,.v2-link{color:var(--primary);font-size:11.5px;padding:3px 7px;border-radius:6px}
 .v2-head-action:hover,.v2-link:hover{background:var(--primary-soft)}
-.v2-focus-list{padding:3px 8px 5px}
-.v2-task-row{display:flex;align-items:flex-start;gap:10px;padding:11px 8px;border-bottom:1px solid var(--line2);min-width:0;transition:background .13s,transform .13s}
+.v2-focus-list{padding:2px 8px 3px}
+.v2-task-row{display:flex;align-items:center;gap:9px;padding:9px 8px;border-bottom:1px solid var(--line2);min-width:0;transition:background .13s,box-shadow .13s}
 .v2-task-row:last-child{border-bottom:none}
-.v2-task-row:hover{background:var(--hover)}
+.v2-task-row:hover{background:var(--hover);box-shadow:inset 3px 0 0 color-mix(in srgb,var(--primary) 22%,transparent)}
 .v2-task-row.is-priority{border-left:3px solid var(--primary);padding-left:5px}
-.v2-check{width:19px;height:19px;margin-top:1px;flex:none;border:1.6px solid color-mix(in srgb,var(--text) 24%,var(--line));border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;transition:all .15s}
-.v2-check:hover{border-color:var(--primary);background:var(--primary-soft)}
-.v2-check.on{background:var(--primary);border-color:var(--primary)}
-.v2-check svg{width:11px;height:11px;opacity:0}.v2-check.on svg{opacity:1}
+.v2-check{position:relative;width:32px;height:32px;margin:-5px -3px -5px -6px;flex:none;border:0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;background:transparent;transition:background .15s}
+.v2-check::before{content:"";position:absolute;inset:6px;border:1.6px solid color-mix(in srgb,var(--text) 27%,var(--line));border-radius:6px;transition:all .15s}
+.v2-check:hover{background:var(--primary-soft)}
+.v2-check:hover::before{border-color:var(--primary)}
+.v2-check.on{background:transparent}
+.v2-check.on::before{background:var(--primary);border-color:var(--primary)}
+.v2-check svg{position:relative;z-index:1;width:11px;height:11px;opacity:0}.v2-check.on svg{opacity:1}
 .v2-task-main{flex:1;min-width:0}
-.v2-task-title{font-size:13.5px;line-height:1.45;word-break:break-word;font-weight:560}
+.v2-task-title{font-size:13.25px;line-height:1.4;word-break:break-word;font-weight:560}
 .v2-task-title.done{text-decoration:line-through;color:var(--muted2)}
-.v2-task-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:5px;color:var(--muted);font-size:11px}
-.v2-task-actions{display:flex;align-items:center;gap:2px;flex:none;opacity:.35;transition:opacity .15s}
-.v2-task-row:hover .v2-task-actions,.v2-task-row:focus-within .v2-task-actions{opacity:1}
-.v2-icon-action{min-width:27px;height:26px;padding:0 5px;border-radius:6px;color:var(--muted);font-size:11px;white-space:nowrap}
-.v2-icon-action:hover{background:var(--primary-soft);color:var(--primary)}
-.v2-icon-action.danger:hover{background:var(--danger-soft);color:var(--danger)}
+.v2-task-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:4px;color:var(--muted);font-size:11px}
+.v2-task-actions{display:flex;align-items:center;gap:3px;flex:none;opacity:0;pointer-events:none;transform:translateX(3px);transition:transform .15s}
+.v2-task-row:hover .v2-task-actions,.v2-task-row:focus-within .v2-task-actions{opacity:1;pointer-events:auto;transform:none}
+.v2-icon-action{min-width:32px;height:30px;padding:0 7px;border:1px solid transparent;border-radius:7px;color:var(--text);font-size:11px;white-space:nowrap;transition:background .14s,border-color .14s,color .14s}
+.v2-icon-action:hover{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 24%,transparent);color:var(--primary)}
+.v2-icon-action.danger:hover{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 25%,transparent);color:var(--danger)}
 .v2-chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 7px;line-height:1.65;background:var(--hover);color:var(--muted);font-size:10.5px;white-space:nowrap}
 .v2-chip.project{background:var(--primary-soft);color:var(--primary);font-weight:650}
 .v2-chip.high{background:var(--danger-soft);color:var(--danger);font-weight:650}
@@ -900,29 +906,34 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-chip.tbd{background:var(--warn-soft);color:var(--warn);font-weight:650}
 .v2-chip.over{background:var(--danger);color:#fff;font-weight:700}
 .v2-empty{padding:31px 18px;color:var(--muted2);font-size:12px;text-align:center;line-height:1.8}
-.v2-empty.compact{padding:15px 16px}
+.v2-empty.compact{padding:10px 16px 11px;color:var(--muted);text-align:left;line-height:1.55;min-height:0}
 .v2-empty strong{display:block;color:var(--text);font-size:13px;margin-bottom:3px}
+.v2-card.is-empty .v2-card-head{padding-bottom:7px;border-bottom:none}.v2-card.is-empty .v2-empty.compact{padding-top:3px;padding-bottom:10px}
 .v2-side-stack{display:flex;flex-direction:column;gap:14px;min-width:0}
-.v2-inbox-summary{padding:12px 16px 11px;display:flex;align-items:center;gap:13px}
-.v2-inbox-count{width:44px;height:44px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;flex:none}
+.v2-inbox-summary{padding:10px 16px 9px;display:flex;align-items:center;gap:11px}
+.v2-inbox-summary.is-single{padding-top:7px;padding-bottom:7px;gap:9px}
+.v2-inbox-count{width:40px;height:40px;border-radius:11px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;flex:none}
+.v2-inbox-summary.is-single .v2-inbox-count{width:32px;height:32px;border-radius:9px;font-size:15px}
 .v2-inbox-copy{min-width:0;flex:1}.v2-inbox-copy strong{display:block;font-size:13px}.v2-inbox-copy span{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
-.v2-inbox-empty{display:flex;align-items:center;gap:10px;padding:14px 16px}.v2-inbox-empty-copy{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1}.v2-inbox-empty-copy strong{color:var(--text);font-size:12px;white-space:nowrap}.v2-inbox-empty-copy span{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-inbox-compact-actions{display:flex;align-items:center;gap:6px;flex:none}.v2-inbox-compact-actions .btn-primary,.v2-inbox-compact-actions .btn-ghost{height:30px;padding:0 9px;font-size:11px}
+.v2-home-inbox.is-single .v2-inbox-copy span{display:none}
+.v2-inbox-empty{display:flex;align-items:center;gap:10px;padding:9px 16px}.v2-inbox-empty-copy{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1}.v2-inbox-empty-copy strong{color:var(--text);font-size:12px;white-space:nowrap}.v2-inbox-empty-copy span{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v2-quick-hint{margin:0 16px 15px;padding:9px 10px;border:1px dashed color-mix(in srgb,var(--primary) 42%,var(--line));border-radius:9px;color:var(--muted);font-size:11.5px;line-height:1.6;cursor:pointer}
 .v2-quick-hint:hover{color:var(--primary);background:var(--primary-soft)}
-.v2-wait-list,.v2-upcoming-list,.v2-done-list{padding:3px 8px 5px}
-.v2-wait-row,.v2-upcoming-row,.v2-done-row{display:flex;align-items:flex-start;gap:9px;padding:8px 8px;border-bottom:1px solid var(--line2);min-width:0}
+.v2-wait-list,.v2-upcoming-list,.v2-done-list{padding:2px 8px 3px}
+.v2-wait-row,.v2-upcoming-row,.v2-done-row{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-bottom:1px solid var(--line2);min-width:0}
 .v2-wait-row:last-child,.v2-upcoming-row:last-child,.v2-done-row:last-child{border-bottom:none}
 .v2-dot{width:7px;height:7px;border-radius:50%;background:var(--warn);margin-top:7px;flex:none}.v2-dot.ok{background:var(--ok)}.v2-dot.danger{background:var(--danger)}
 .v2-mini-main{flex:1;min-width:0}.v2-mini-title{font-size:12.5px;line-height:1.45;word-break:break-word}.v2-mini-sub{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v2-mini-time{font-size:10.5px;color:var(--muted);white-space:nowrap;flex:none;margin-top:2px}.v2-mini-time.soon{color:var(--danger);font-weight:700}
 .v2-date-label{width:57px;flex:none;color:var(--primary);font-size:11px;font-weight:750;line-height:1.45}.v2-date-label small{display:block;color:var(--muted);font-weight:500}.v2-upcoming-row.tbd .v2-date-label{width:63px;color:var(--warn)}
-.v2-upcoming-row{display:grid;grid-template-columns:42px 58px minmax(0,1fr) auto;align-items:center;gap:7px}
+.v2-upcoming-row{display:grid;grid-template-columns:52px 70px minmax(0,1fr) 52px;align-items:center;gap:8px}
 .v2-upcoming-status{color:var(--muted);font-size:10.5px;font-weight:750;line-height:1.35;white-space:nowrap}.v2-upcoming-status.overdue{color:var(--danger)}.v2-upcoming-status.today{color:var(--warn)}.v2-upcoming-status.tomorrow{color:var(--primary)}.v2-upcoming-status.tbd{color:var(--warn)}
 .v2-upcoming-date{color:var(--muted);font-size:10.5px;white-space:nowrap}.v2-upcoming-row .v2-mini-title{font-size:12.25px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-upcoming-row .v2-mini-sub{display:none}
 .v2-done-row{align-items:center}.v2-done-time{width:43px;flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}.v2-done-title{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v2-done-project{flex:none}
-.v2-home-actions{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--line2)}.v2-home-actions .btn-primary,.v2-home-actions .btn-ghost{height:30px;padding:0 10px;font-size:11.5px}.v2-focus-actions .v2-link{margin-left:auto}.v2-home-ai-result{margin:0 16px 10px}.v2-home-ai-result .v2-ai-answer{margin-top:0}
+.v2-home-actions{display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--line2)}.v2-home-actions .btn-primary,.v2-home-actions .btn-ghost{height:30px;padding:0 10px;font-size:11.5px}.v2-focus-actions .v2-link{margin-left:auto}.v2-home-ai-result{margin:0 16px 8px}.v2-home-ai-result .v2-ai-answer{margin-top:0}
 .v2-card-more{display:block;width:calc(100% - 32px);margin:2px 16px 9px;padding:6px 0;border-top:1px solid var(--line2);color:var(--primary);font-size:11px;text-align:left}.v2-card-more:hover{color:var(--primary-d)}
-.v2-home-risk{display:flex;align-items:center;gap:7px;min-height:28px;margin:0 2px 1px;padding:5px 9px;border:1px solid color-mix(in srgb,var(--warn) 38%,var(--line));border-radius:8px;background:color-mix(in srgb,var(--warn-soft) 45%,var(--card));color:var(--muted);font-size:11px}.v2-home-risk-icon{color:var(--warn);font-size:12px;line-height:1}.v2-home-risk-label{color:var(--text);font-weight:650;white-space:nowrap}.v2-home-risk button{padding:2px 3px;border-radius:4px;color:var(--muted);font-size:11px;white-space:nowrap}.v2-home-risk button:hover{background:var(--card);color:var(--primary)}.v2-home-risk button.danger{color:var(--danger)}.v2-home-risk button.warn{color:var(--warn)}.v2-home-risk-sep{color:var(--muted2)}
+.v2-home-risk{display:flex;align-items:center;gap:7px;min-height:28px;margin:0 2px 0;padding:4px 9px;border:1px solid color-mix(in srgb,var(--warn) 38%,var(--line));border-radius:8px;background:color-mix(in srgb,var(--warn-soft) 45%,var(--card));color:var(--muted);font-size:11px}.v2-home-risk-icon{color:var(--warn);font-size:12px;line-height:1}.v2-home-risk-label{color:var(--text);font-weight:650;white-space:nowrap}.v2-home-risk button{display:inline-flex;align-items:center;gap:3px;padding:2px 3px;border-radius:4px;color:var(--muted);font-size:11px;white-space:nowrap}.v2-home-risk button:hover{background:var(--card);color:var(--primary)}.v2-home-risk button.danger{color:var(--danger)}.v2-home-risk button.warn{color:var(--warn)}.v2-home-risk button.primary{color:var(--primary)}.v2-home-risk-sep{color:var(--muted2)}.v2-hint-glyph{font-size:10.5px;line-height:1}
 .v2-ai-card{padding:15px 16px}.v2-ai-card h2{font-size:14px}.v2-ai-card p{margin-top:4px;color:var(--muted);font-size:11.5px;line-height:1.6}.v2-ai-query{display:flex;gap:7px;margin-top:11px}.v2-ai-query .inp{flex:1;min-width:0}.v2-ai-answer{margin-top:10px;padding:10px 11px;border-radius:9px;background:var(--hover);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word}.v2-ai-answer:empty{display:none}.v2-ai-answer strong{display:block;font-size:11px;color:var(--primary);margin-bottom:3px}.v2-ai-bullets{margin:5px 0 0 17px;color:var(--muted)}.v2-ai-sources{margin-top:7px;color:var(--muted2);font-size:10.5px}.ai-preview-raw{display:block;margin-top:4px;padding:7px 8px;border-left:2px solid var(--primary);white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:11px}.v2-risk-strip{margin-top:11px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--warn-soft) 42%,var(--card));font-size:11px}.v2-risk-head{display:flex;align-items:center;gap:7px}.v2-risk-head strong{color:var(--warn);font-size:11px}.v2-risk-head span{color:var(--muted2);font-size:10px}.v2-risk-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.v2-risk-item{padding:3px 7px;border-radius:999px;background:var(--card);color:var(--muted);border:1px solid var(--line2)}.v2-risk-none{color:var(--ok);font-size:11px}.v2-reserved-note{margin-top:9px;color:var(--muted2);font-size:10px;line-height:1.5}.v2-smart-list{padding:4px 8px 8px}.v2-smart-row{display:flex;align-items:center;gap:8px;width:100%;padding:9px 8px;border-bottom:1px solid var(--line2);color:var(--muted);font-size:11.5px;text-align:left;border-radius:6px}.v2-smart-row:last-child{border-bottom:none}.v2-smart-row:hover{background:var(--hover);color:var(--text)}.v2-smart-icon{width:19px;text-align:center;font-size:13px}.v2-smart-row.danger .v2-smart-icon,.v2-smart-row.danger .v2-smart-open{color:var(--danger)}.v2-smart-row.warn .v2-smart-icon,.v2-smart-row.warn .v2-smart-open{color:var(--warn)}.v2-smart-row.primary .v2-smart-icon,.v2-smart-row.primary .v2-smart-open{color:var(--primary)}.v2-smart-open{margin-left:auto;font-size:10px;color:var(--primary)}
 
 /* 收件箱 */
@@ -961,8 +972,8 @@ body:not(.v2-view) #v2Panel{display:none!important}
 @media(max-width:700px){
   body.v2-view .main{padding:14px 12px 18px}
   .v2-pagehead{align-items:flex-start;gap:8px}.v2-pagehead h1{font-size:21px}.v2-page-date{font-size:11px}
-  .v2-status{gap:7px;font-size:10.5px}.v2-status b{font-size:12.5px}
-  .v2-side-stack{display:flex}.v2-task-actions{opacity:1}.v2-task-row{padding-left:5px;padding-right:5px}.v2-icon-action{min-width:24px;padding:0 3px}
+  .v2-status{font-size:10.5px}.v2-status-item{padding-left:5px;padding-right:5px}.v2-status-item b{font-size:12.5px}.v2-status i{margin-left:1px;margin-right:1px}
+  .v2-side-stack{display:flex}.v2-task-row{flex-wrap:wrap;padding-left:8px;padding-right:8px}.v2-task-actions{width:calc(100% - 34px);margin-left:34px;opacity:1;pointer-events:auto;transform:none;flex-wrap:wrap;justify-content:flex-end}.v2-icon-action{min-width:32px;padding:0 5px}
   .v2-candidate-top{grid-template-columns:20px minmax(0,1fr)}.v2-candidate-top .v2-candidate-category{grid-column:2}.v2-candidate-meta{grid-template-columns:1fr 1fr}.v2-field.wide{grid-column:auto}.v2-form-grid{grid-template-columns:1fr}.v2-modal-foot{align-items:flex-end;flex-direction:column}.v2-modal-foot>div{width:100%;justify-content:flex-end}
   .v2-record-toolbar .v2-record-export{margin-left:0}.tb-right .tb-quick{display:flex!important}.tb-right .tb-btn:not(#btnCmdk):not(#btnQuickRecord):not(#btnReminderCenter):not(#btnAIAssistant):not(#btnMore){display:none}.tb-right{gap:4px}.tb-btn.tb-ai{padding:0 8px}.tb-more-menu{right:-4px}
 }
@@ -1180,11 +1191,11 @@ body:not(.v2-view) #v2Panel{display:none!important}
       </div>
     </header>
     <div class="v2-status" id="v2Status" aria-label="今日状态">
-      <span><b id="v2StatToday">0</b> 今日重点</span>
-      <i></i><span><b id="v2StatInbox">0</b> 收件箱</span>
-      <i></i><span><b id="v2StatWaiting">0</b> 等回复</span>
-      <i></i><span><b id="v2StatReminders">0</b> 提醒</span>
-      <i></i><span><b id="v2StatDone">0</b> 已完成</span>
+      <button class="v2-status-item" type="button" data-v2-anchor="v2HomeFocus"><b id="v2StatToday">0</b> 今天重点</button>
+      <i></i><button class="v2-status-item" type="button" data-v2-anchor="v2HomeInbox"><b id="v2StatInbox">0</b> 收件箱</button>
+      <i></i><button class="v2-status-item" type="button" data-v2-anchor="v2HomeWaiting"><b id="v2StatWaiting">0</b> 等回复</button>
+      <i></i><button class="v2-status-item" type="button" data-v2-status-action="reminders"><b id="v2StatReminders">0</b> 提醒</button>
+      <i></i><button class="v2-status-item" type="button" data-v2-anchor="v2HomeDone"><b id="v2StatDone">0</b> 已完成</button>
     </div>
     <div class="v2-content" id="v2Content"></div>
   </section>
@@ -4385,6 +4396,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2TodayTasks(){
     var td=fmt(today0());return data.todos.filter(function(t){return v2IsOpen(t)&&!v2IsWaiting(t)&&(t.isToday||v2Due(t)===td);}).sort(v2TaskSort);
   }
+  function v2HomeFocusTasks(){return v2TodayTasks().slice(0,5);}
+  function v2HomeFocusIds(tasks){
+    var ids=Object.create(null);
+    (tasks||[]).forEach(function(t){if(t&&t.id)ids[t.id]=true;});
+    return ids;
+  }
   function v2WaitingTasks(){return data.todos.filter(function(t){return v2IsWaiting(t);}).sort(function(a,b){return (v2ParseDate(a.followUpAt)||new Date('2999-01-01'))-(v2ParseDate(b.followUpAt)||new Date('2999-01-01'))||v2TaskSort(a,b);});}
   function v2DoneToday(){
     var td=fmt(today0());return data.todos.filter(function(t){return t.done&&v2DateOnly(t.completedAt||t.doneAt)===td;}).sort(function(a,b){return v2ParseDate(b.completedAt||b.doneAt)-v2ParseDate(a.completedAt||a.doneAt);});
@@ -4393,16 +4410,27 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var d=v2ParseDate(date);if(!d)return '';
     var n=diffDays(d,today0());return n===0?'今天':n===1?'明天':n>1?'还有'+n+'天':n===-1?'昨天':'已过'+(-n)+'天';
   }
-  function v2Upcoming(){
+  function v2Upcoming(excludedTaskIds){
+    excludedTaskIds=excludedTaskIds||Object.create(null);
     var td=fmt(today0()),limit=fmt(addDays(today0(),14)),list=[];
     data.todos.forEach(function(t){
       if(!v2IsOpen(t))return;
-      if(v2DueMode(t)==='tbd'){list.push({type:'task',kind:'tbd',date:null,text:v2TaskTitle(t),task:t});return;}
+      if(t.id&&excludedTaskIds[t.id])return;
+      if(v2DueMode(t)==='tbd'){list.push({type:'task',kind:'tbd',group:'时间待定',date:null,text:v2TaskTitle(t),task:t});return;}
       var d=v2Due(t);if(!v2IsWaiting(t)&&d&&d<=limit)list.push({type:'task',kind:'dated',group:v2UpcomingGroup(d,td),date:d,text:v2TaskTitle(t),task:t});
     });
     Object.keys(data.events||{}).forEach(function(src){if(src<td||src>limit)return;(eventsOn(src)||[]).forEach(function(e){list.push({type:'event',kind:'dated',group:v2UpcomingGroup(src,td),date:src,text:e.text,task:null});});});
     var order={'逾期':0,'今天':1,'明天':2,'本周':3,'未来14天':4,'时间待定':5};
-    return list.sort(function(a,b){if(a.kind!==b.kind)return a.kind==='tbd'?1:-1;var ao=order[a.group]===undefined?9:order[a.group],bo=order[b.group]===undefined?9:order[b.group];return ao-bo||(a.date||'9999-12-31').localeCompare(b.date||'9999-12-31')||a.type.localeCompare(b.type);}).slice(0,20);
+    return list.sort(function(a,b){
+      if(a.kind!==b.kind)return a.kind==='tbd'?1:-1;
+      var ao=order[a.group]===undefined?9:order[a.group],bo=order[b.group]===undefined?9:order[b.group];
+      if(ao!==bo)return ao-bo;
+      var dateCmp=(a.date||'9999-12-31').localeCompare(b.date||'9999-12-31');
+      if(dateCmp)return dateCmp;
+      if(a.task&&b.task){var taskCmp=v2TaskSort(a.task,b.task);if(taskCmp)return taskCmp;}
+      if(a.type!==b.type)return a.type==='task'?-1:1;
+      return String(a.text||'').localeCompare(String(b.text||''));
+    }).slice(0,20);
   }
   function v2DoneRow(t){
     var p=v2TaskProject(t),d=t.completedAt||t.doneAt;
@@ -4456,25 +4484,24 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     return '<div class="v2-risk-strip"><div class="v2-risk-head"><strong>风险信号（仅提示）</strong><span>只依据已记录数据</span></div>'+(signals.length?'<div class="v2-risk-list">'+signals.map(function(x){return '<span class="v2-risk-item">'+esc(x)+'</span>';}).join('')+'</div>':'<div class="v2-risk-none">当前没有明显的逾期或待跟进信号。</div>')+'</div>';
   }
   function v2SmartHints(){
-    var todayKey=fmt(today0()),now=new Date(),hints=[];
-    var overdue=data.todos.filter(function(t){return v2IsOpen(t)&&v2Due(t)&&v2Due(t)<todayKey;}).length;
-    var dueToday=data.todos.filter(function(t){return v2IsOpen(t)&&!v2IsWaiting(t)&&v2Due(t)===todayKey;}).length;
-    var waitingDue=data.todos.filter(function(t){var d=v2ParseDate(t.followUpAt);return v2IsWaiting(t)&&d&&d<=now;}).length;
-    var inbox=v2InboxPending().length;
-    var tbd=data.todos.filter(function(t){return v2IsOpen(t)&&v2DueMode(t)==='tbd';}).length;
-    var reminderCount=typeof v2ReminderCenterItems==='function'?v2ReminderCenterItems().upcoming.length:0;
-    if(overdue)hints.push({icon:'⚠',text:'逾期 '+overdue+' 项',target:'tasks',tab:'all',tone:'danger'});
-    if(waitingDue)hints.push({icon:'⏳',text:'待跟进 '+waitingDue+' 项',target:'tasks',tab:'waiting',tone:'warn'});
-    if(dueToday)hints.push({icon:'◷',text:'今天截止 '+dueToday+' 项',target:'tasks',tab:'today',tone:'warn'});
-    if(tbd)hints.push({icon:'⌛',text:'时间待定 '+tbd+' 项',target:'tasks',tab:'tbd',tone:'warn'});
-    if(inbox)hints.push({icon:'📥',text:'收件箱 '+inbox+' 条待整理',target:'inbox',tone:'primary'});
-    if(reminderCount)hints.push({icon:'🔔',text:'提醒即将到期 '+reminderCount+' 个',target:'reminders',tone:'primary'});
+    var todayKey=fmt(today0()),now=new Date(),day=86400000,hints=[],focusIds=v2HomeFocusIds(v2HomeFocusTasks());
+    function olderThan(value,days){var d=v2ParseDate(value);return !!d&&now.getTime()-d.getTime()>=days*day;}
+    var overdue=data.todos.filter(function(t){return v2IsOpen(t)&&v2Due(t)&&v2Due(t)<todayKey&&!focusIds[t.id];});
+    var dueToday=data.todos.filter(function(t){return v2IsOpen(t)&&!v2IsWaiting(t)&&v2Due(t)===todayKey&&!focusIds[t.id];});
+    var waitingDue=data.todos.filter(function(t){var d=v2ParseDate(t.followUpAt);return v2IsWaiting(t)&&d&&d<=now;});
+    var staleInbox=v2InboxPending().filter(function(x){return olderThan(x.updatedAt||x.createdAt,2);});
+    var staleTbd=data.todos.filter(function(t){return v2IsOpen(t)&&v2DueMode(t)==='tbd'&&olderThan(t.updatedAt||t.createdAt,7);});
+    if(overdue.length)hints.push({icon:'⚠',text:'还有 '+overdue.length+' 项逾期未排进今天重点',target:'tasks',tab:'all',tone:'danger'});
+    if(waitingDue.length)hints.push({icon:'⏳',text:'有 '+waitingDue.length+' 项等回复已到跟进时间',target:'tasks',tab:'waiting',tone:'warn'});
+    if(dueToday.length)hints.push({icon:'◷',text:'今天还有 '+dueToday.length+' 项截止项未排进重点',target:'tasks',tab:'today',tone:'warn'});
+    if(staleInbox.length)hints.push({icon:'📥',text:'收件箱有 '+staleInbox.length+' 条内容超过 2 天未整理',target:'inbox',tone:'primary'});
+    if(staleTbd.length)hints.push({icon:'⌛',text:'有 '+staleTbd.length+' 项时间待定超过 7 天',target:'tasks',tab:'tbd',tone:'warn'});
     return hints.slice(0,4);
   }
   function v2SmartHintsHTML(){
-    var hints=v2SmartHints().filter(function(x){return x.tone==='danger'||(x.tone==='warn'&&(x.tab==='today'||x.tab==='waiting'));});
+    var hints=v2SmartHints();
     if(!hints.length)return '';
-    return '<div class="v2-home-risk" role="status" aria-label="智能提示"><span class="v2-home-risk-icon" aria-hidden="true">⚠</span><span class="v2-home-risk-label">智能提示</span>'+hints.map(function(x,i){return (i?'<span class="v2-home-risk-sep" aria-hidden="true">·</span>':'')+'<button class="'+esc(x.tone||'')+'" type="button" data-v2-smart-target="'+esc(x.target)+'"'+(x.tab?' data-v2-smart-tab="'+esc(x.tab)+'"':'')+'>'+esc(x.text)+'</button>';}).join('')+'</div>';
+    return '<div class="v2-home-risk" role="status" aria-label="智能提示"><span class="v2-home-risk-label">智能提示</span>'+hints.map(function(x,i){return (i?'<span class="v2-home-risk-sep" aria-hidden="true">·</span>':'')+'<button class="'+esc(x.tone||'')+'" type="button" data-v2-smart-target="'+esc(x.target)+'"'+(x.tab?' data-v2-smart-tab="'+esc(x.tab)+'"':'')+'><span class="v2-hint-glyph" aria-hidden="true">'+esc(x.icon||'•')+'</span>'+esc(x.text)+'</button>';}).join('')+'</div>';
   }
   function openAIAssistant(){
     var dr=$('aiDrawer'),mask=$('aiDrawerMask');if(!dr||!mask)return;
@@ -4548,24 +4575,26 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function renderV2Home(){
     v2Header('今天','先处理最重要的事，再整理其余输入。');
-    var today=v2TodayTasks(),waiting=v2WaitingTasks(),done=v2DoneToday(),allUpcoming=v2Upcoming(),upcoming=allUpcoming.slice(0,5),pending=v2InboxPending(),focus=today.slice(0,5);
+    var today=v2TodayTasks(),waiting=v2WaitingTasks(),done=v2DoneToday(),focus=v2HomeFocusTasks(),focusIds=v2HomeFocusIds(focus),allUpcoming=v2Upcoming(focusIds),upcoming=allUpcoming.slice(0,5),pending=v2InboxPending();
+    var inboxStateClass=pending.length===0?' is-empty':pending.length===1?' is-single':'';
     var homeInboxState=v2InboxAIState.showHome?v2InboxAIState:null,homeInboxEntryId=homeInboxState&&homeInboxState.entryId,homeInboxBusy=!!(homeInboxState&&homeInboxState.status==='busy');
+    var inboxActions='<button class="btn-primary" type="button" data-v2-action="inbox-ai"'+(homeInboxBusy||v2AiBusy?' disabled':'')+'>'+(homeInboxBusy?'正在整理…':'AI整理')+'</button><button class="btn-ghost" type="button" data-v2-nav="inbox">打开收件箱</button>';
     var h=v2SmartHintsHTML()+'<div class="v2-home-grid">';
-    h+='<article class="v2-card primary v2-home-focus"><div class="v2-card-head"><span class="v2-bar"></span><h2>今天重点</h2><p>最多先看 5 项</p><button class="v2-head-action" type="button" data-v2-ai-action="planToday">✨ 帮我安排今天</button><span class="v2-count">'+today.length+' 项</span></div><div class="v2-focus-list">';
+    h+='<article id="v2HomeFocus" class="v2-card primary v2-home-focus"><div class="v2-card-head"><span class="v2-bar"></span><h2>今天重点</h2><p>最多先看 5 项</p><button class="v2-head-action" type="button" data-v2-ai-action="planToday">✨ 帮我安排今天</button><span class="v2-count">'+today.length+' 项</span></div><div class="v2-focus-list">';
     if(!focus.length)h+='<div class="v2-empty compact"><strong>今天还没有安排重点</strong>从收件箱挑一件，或者新建一个明确任务。</div>';else focus.forEach(function(t){h+=v2TaskRowHTML(t,{home:true,reorder:true});});
     h+='</div>'+(v2HomeAI.plan?'<div class="v2-home-ai-result">'+v2PlanHTML()+'</div>':'')+'<div class="v2-home-actions v2-focus-actions"><button class="btn-ghost" type="button" data-v2-action="open-new-task">新建任务</button><button class="btn-ghost" type="button" data-v2-nav="inbox">从收件箱安排</button><button class="v2-link" type="button" data-v2-nav="tasks" data-v2-tab="today">查看全部</button></div></article>';
-    h+='<article class="v2-card v2-home-inbox"><div class="v2-card-head"><span class="v2-bar"></span><h2>收件箱</h2><span class="v2-count">'+pending.length+' 条</span></div>';
+    h+='<article id="v2HomeInbox" class="v2-card v2-home-inbox'+inboxStateClass+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>收件箱</h2><span class="v2-count">'+pending.length+' 条</span></div>';
     if(pending.length){
-      h+='<div class="v2-inbox-summary"><div class="v2-inbox-count">'+pending.length+'</div><div class="v2-inbox-copy"><strong>条新内容等待整理</strong><span>原文先保存，确认后才写入任务</span></div></div><div class="v2-home-actions v2-inbox-actions"><button class="btn-primary" type="button" data-v2-action="inbox-ai"'+(homeInboxBusy||v2AiBusy?' disabled':'')+'>'+(homeInboxBusy?'正在整理…':'AI整理')+'</button><button class="btn-ghost" type="button" data-v2-nav="inbox">打开收件箱</button></div>'+(homeInboxState&&homeInboxState.message&&homeInboxState.status!=='busy'?v2InboxNoticeHTML(homeInboxState.message,homeInboxEntryId):'');
+      h+='<div class="v2-inbox-summary'+(pending.length===1?' is-single':'')+'"><div class="v2-inbox-count">'+pending.length+'</div><div class="v2-inbox-copy"><strong>条新内容等待整理</strong><span>原文先保存，确认后才写入任务</span></div>'+(pending.length===1?'<div class="v2-inbox-compact-actions">'+inboxActions+'</div>':'')+'</div>'+(pending.length===1?'':'<div class="v2-home-actions v2-inbox-actions">'+inboxActions+'</div>')+(homeInboxState&&homeInboxState.message&&homeInboxState.status!=='busy'?v2InboxNoticeHTML(homeInboxState.message,homeInboxEntryId):'');
     }else h+='<div class="v2-inbox-empty"><div class="v2-inbox-empty-copy"><strong>收件箱 0</strong><span>暂无待整理内容</span></div><button class="btn-ghost" type="button" data-v2-nav="inbox">打开</button></div>';
     h+='</article>';
-    h+='<article class="v2-card v2-home-upcoming"><div class="v2-card-head"><span class="v2-bar"></span><h2>近期节点</h2><p>截止与日程</p><button class="v2-head-action" type="button" data-v2-nav="calendar">'+(allUpcoming.length>upcoming.length?'查看全部 →':'打开日历')+'</button></div><div class="v2-upcoming-list">';
-    if(!upcoming.length)h+='<div class="v2-empty compact">近期没有逾期、排期节点或时间待定事项。</div>';else upcoming.forEach(function(x){var tbd=x.kind==='tbd',group=x.group||'',status=tbd?'待定':group==='逾期'?'逾期':group==='今天'?'今天':group==='明天'?'明天':group==='本周'?'本周':'近期',statusClass=tbd?'tbd':group==='逾期'?'overdue':group==='今天'?'today':group==='明天'?'tomorrow':'',dateLabel=tbd?'—':v2DateText(x.date),relative=tbd?'待确定':v2RelativeDateLabel(x.date);h+='<div class="v2-upcoming-row"><span class="v2-upcoming-status '+statusClass+'">'+esc(status)+'</span><span class="v2-upcoming-date">'+esc(dateLabel)+'</span><div class="v2-mini-main"><div class="v2-mini-title">'+esc(x.text)+'</div></div><span class="v2-mini-time'+(group==='逾期'?' soon':'')+'">'+esc(relative)+'</span></div>';});
+    h+='<article id="v2HomeUpcoming" class="v2-card v2-home-upcoming'+(!upcoming.length?' is-empty':'')+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>近期节点</h2><p>截止与日程</p><button class="v2-head-action" type="button" data-v2-nav="calendar">'+(allUpcoming.length>upcoming.length?'查看全部 →':'打开日历')+'</button></div><div class="v2-upcoming-list">';
+    if(!upcoming.length)h+='<div class="v2-empty compact">近期没有逾期、排期节点或时间待定事项。</div>';else upcoming.forEach(function(x){var tbd=x.kind==='tbd',group=x.group||'',status=tbd?'时间待定':group==='逾期'?'逾期':group==='今天'?'今天':group==='明天'?'明天':group==='本周'?'本周':'近期',statusClass=tbd?'tbd':group==='逾期'?'overdue':group==='今天'?'today':group==='明天'?'tomorrow':'',dateLabel=tbd?'—':v2DateText(x.date),relative=tbd?'待安排':v2RelativeDateLabel(x.date);h+='<div class="v2-upcoming-row'+(tbd?' tbd':'')+'"'+(x.task&&x.task.id?' data-task-id="'+esc(x.task.id)+'"':'')+'><span class="v2-upcoming-status '+statusClass+'">'+esc(status)+'</span><span class="v2-upcoming-date">'+esc(dateLabel)+'</span><div class="v2-mini-main"><div class="v2-mini-title">'+esc(x.text)+'</div></div><span class="v2-mini-time'+(group==='逾期'?' soon':'')+'">'+esc(relative)+'</span></div>';});
     h+='</div></article>';
-    h+='<article class="v2-card v2-home-waiting"><div class="v2-card-head"><span class="v2-bar"></span><h2>等回复 / 待跟进</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="waiting">全部 '+waiting.length+'</button></div><div class="v2-wait-list">';
+    h+='<article id="v2HomeWaiting" class="v2-card v2-home-waiting'+(!waiting.length?' is-empty':'')+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>等回复 / 待跟进</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="waiting">全部 '+waiting.length+'</button></div><div class="v2-wait-list">';
     if(!waiting.length)h+='<div class="v2-empty compact">目前没有等待回复的事项。</div>';else waiting.slice(0,3).forEach(function(t){h+='<div class="v2-wait-row"><span class="v2-dot"></span><div class="v2-mini-main"><div class="v2-mini-title">'+esc(v2TaskTitle(t))+'</div><div class="v2-mini-sub">等：'+esc(t.waitingFor||'相关方')+'</div></div><span class="v2-mini-time'+(t.followUpAt&&v2ParseDate(t.followUpAt)<=new Date()?' soon':'')+'">'+(t.followUpAt?esc(v2DateTimeText(t.followUpAt)):'待安排')+'</span></div>';});
     h+='</div>'+(waiting.length>3?'<button class="v2-card-more" type="button" data-v2-nav="tasks" data-v2-tab="waiting">查看全部待跟进 →</button>':'')+'</article>';
-    h+='<article class="v2-card v2-home-done"><div class="v2-card-head"><span class="v2-bar"></span><h2>今天已完成</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button><span class="v2-count">'+done.length+' 项</span></div><div class="v2-done-list">';
+    h+='<article id="v2HomeDone" class="v2-card v2-home-done'+(!done.length?' is-empty':'')+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>今天已完成</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button><span class="v2-count">'+done.length+' 项</span></div><div class="v2-done-list">';
     if(!done.length)h+='<div class="v2-empty compact">完成任务后，会自动留下时间与项目记录。</div>';else done.slice(0,5).forEach(function(t){h+=v2DoneRow(t);});
     h+='</div>'+(done.length>5?'<button class="v2-card-more" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button>':'')+'</article></div>';
     $('v2Content').innerHTML=h;
@@ -4966,6 +4995,15 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   /* V2 导航与页面动作 */
   window.switchView=switchView;
   document.querySelectorAll('.nav-item[data-v2]').forEach(function(n){n.addEventListener('click',function(){switchView(n.getAttribute('data-v2'));});});
+  function v2ScrollToHomeAnchor(id){
+    var target=$(id);if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  if($('v2Status'))$('v2Status').addEventListener('click',function(e){
+    var anchor=e.target.closest('[data-v2-anchor]');
+    if(anchor){var id=anchor.getAttribute('data-v2-anchor');if(v2Mode!=='home'){switchV2('home');setTimeout(function(){v2ScrollToHomeAnchor(id);},30);}else v2ScrollToHomeAnchor(id);return;}
+    var action=e.target.closest('[data-v2-status-action]');
+    if(action&&action.getAttribute('data-v2-status-action')==='reminders'){v2ReminderCenterOpen=true;v2MoreOpen=false;if($('btnReminderCenter'))$('btnReminderCenter').setAttribute('aria-expanded','true');if($('btnMore'))$('btnMore').setAttribute('aria-expanded','false');renderV2ReminderCenter();}
+  });
   $('v2Content').addEventListener('click',function(e){
     if(e.target.closest('#v2InboxAnalyze')){v2PrepareInbox($('v2InboxText').value,'paste',v2InboxActiveId);return;}
     if(e.target.closest('#v2InboxAI')){runInboxAIAnalysis($('v2InboxText').value,'paste',v2InboxActiveId,{origin:'inbox',navigateOnSuccess:false});return;}
