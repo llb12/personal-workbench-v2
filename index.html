@@ -1714,7 +1714,7 @@ function weekStart(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());v
 function $(id){return document.getElementById(id);}
 
 /* ===== 保存 ===== */
-var saveTimer=null,saveQueue=Promise.resolve(),saveSeq=0;
+var saveTimer=null,saveQueue=Promise.resolve(),saveSeq=0,saveDirty=false,unloadSeq=0;
 function prepareDataForSave(){
   data.schemaVersion=2;
   var now=new Date().toISOString();
@@ -1764,10 +1764,12 @@ function needsV2Migration(raw){
 function persistSnapshot(snapshot,seq){
   $('saveHint').textContent='正在保存…';
   saveQueue=saveQueue.catch(function(){}).then(function(){
+    if(seq<=unloadSeq)return {ok:true,skipped:true};
     return store.save(snapshot);
   }).then(function(result){
     if(!result||result.ok!==true)throw new Error(result&&result.error?result.error:'保存未成功');
     if(seq===saveSeq){
+      saveDirty=false;
       var n=new Date();
       $('saveHint').textContent='已自动保存 '+pad(n.getHours())+':'+pad(n.getMinutes());
       $('noteSaved').textContent='保存于 '+pad(n.getHours())+':'+pad(n.getMinutes());
@@ -1786,6 +1788,7 @@ function persistSnapshot(snapshot,seq){
 }
 function save(immediate){
   if(!loaded)return Promise.resolve({ok:false,error:'数据尚未加载'});
+  saveDirty=true;
   prepareDataForSave();
   clearTimeout(saveTimer);
   var seq=++saveSeq;
@@ -1797,6 +1800,29 @@ function save(immediate){
   },400);
   return Promise.resolve({ok:true,queued:true});
 }
+window.addEventListener('beforeunload',function(event){
+  if(!loaded||!saveDirty||!HAS_API)return;
+  var seq=++saveSeq;
+  var result;
+  try{
+    prepareDataForSave();
+    result=window.api.flush(JSON.parse(JSON.stringify(data)));
+  }catch(error){
+    result={
+      ok:false,
+      error:error&&error.message?error.message:'退出前保存失败'
+    };
+  }
+  if(result&&result.ok===true){
+    clearTimeout(saveTimer);
+    unloadSeq=seq;
+    saveDirty=false;
+    return;
+  }
+  $('saveHint').textContent=result&&result.error?result.error:'退出前保存失败';
+  event.preventDefault();
+  event.returnValue='';
+});
 function toast(m,opts){var t=$('toast');var undo=opts&&opts.undo;
   t.innerHTML='';t.appendChild(document.createTextNode(m));
   if(undo){var b=document.createElement('button');b.className='toast-undo';b.textContent='撤销';b.onclick=function(){clearTimeout(t._tm);t.classList.remove('show');undo();};t.appendChild(b);}

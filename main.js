@@ -251,6 +251,10 @@ ipcMain.handle('load-data', () => readData());
 
 ipcMain.handle('save-data', (_evt, data) => writeData(data));
 
+ipcMain.on('flush-data', (event, data) => {
+  event.returnValue = writeData(data);
+});
+
 ipcMain.handle('export-data', async (_evt, data) => {
   const stamp = new Date();
   const pad = n => String(n).padStart(2, '0');
