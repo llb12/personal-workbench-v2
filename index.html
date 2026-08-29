@@ -1564,8 +1564,8 @@ function normalize(d) {
         pri: (t.pri === 'high' || t.pri === 'low') ? t.pri : 'mid',
         done: !!t.done,
         doneAt: t.doneAt || null,
-        due: t.due || null,
-        dueAt: t.dueAt || (t.due ? String(t.due)+'T23:59:59' : null),
+        due: (t.dueMode === 'tbd' || t.dueMode === 'none') ? null : (t.due || null),
+        dueAt: (t.dueMode === 'tbd' || t.dueMode === 'none') ? null : (t.dueAt || (t.due ? String(t.due)+'T23:59:59' : null)),
         dueMode: (t.dueMode === 'fixed' || t.dueMode === 'tbd' || t.dueMode === 'none') ? t.dueMode : ((t.dueAt || t.due) ? 'fixed' : 'none'),
         reminderAt: t.reminderAt || null,
         dueReminder: (t.dueReminder === 'same-day' || t.dueReminder === 'day-before') ? t.dueReminder : 'none',
@@ -1676,7 +1676,7 @@ function normalize(d) {
           category: (c.category === 'confirm' || c.category === 'waiting' || c.category === 'ignore') ? c.category : 'todo',
           projectId: typeof c.projectId === 'string' ? c.projectId : (typeof c.pid === 'string' ? c.pid : ''),
           priority: (c.priority === 'high' || c.priority === 'low') ? c.priority : (c.pri === 'high' || c.pri === 'low' ? c.pri : 'mid'),
-          dueAt: c.dueAt || (c.due ? String(c.due)+'T23:59:59' : ''),
+          dueAt: (c.dueMode === 'tbd' || c.dueMode === 'none') ? '' : (c.dueAt || (c.due ? String(c.due)+'T23:59:59' : '')),
           dueMode: (c.dueMode === 'fixed' || c.dueMode === 'tbd' || c.dueMode === 'none') ? c.dueMode : ((c.dueAt || c.due) ? 'fixed' : 'none'),
           reminderAt: c.reminderAt || '',
           dueReminder: (c.dueReminder === 'same-day' || c.dueReminder === 'day-before') ? c.dueReminder : 'none',
@@ -3966,11 +3966,11 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var m=String(value).match(/^(\d{4}-\d{2}-\d{2})/);
     return m?m[1]:'';
   }
-  function v2InputDateTime(value){return value?v2DateOnly(value)+'T'+String(value).slice(11,16):'';}
+  function v2InputDateTime(value){var d=v2ParseDate(value);return d?fmt(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes()):'';}
   function v2ParseDate(value){
     if(!value)return null;
-    var d=new Date(value);
-    if(isNaN(d.getTime())&&/^\d{4}-\d{2}-\d{2}$/.test(String(value)))d=new Date(String(value)+'T00:00:00');
+    var raw=String(value).trim();
+    var d=/^\d{4}-\d{2}-\d{2}$/.test(raw)?parseD(raw):new Date(value);
     return isNaN(d.getTime())?null:d;
   }
   function v2DateText(value,withWeek){
@@ -4150,16 +4150,16 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     return 'todo';
   }
   function v2CandidateDueMode(text,due){
-    if(due)return 'fixed';
-    return /时间待定|截止时间待定|日期待定|尽快|近期|后续安排|另行通知|待确定/.test(String(text||''))?'tbd':'none';
+    if(/时间待定|截止时间待定|日期待定|尽快|近期|后续安排|另行通知|待确定/.test(String(text||'')))return 'tbd';
+    return due?'fixed':'none';
   }
   function v2CandidateFromText(raw){
     var line=String(raw||'').replace(/^\s+/,'').replace(/\s+$/,'');
     line=line.replace(/^\s*(?:[\d]+[、.．)）]|[①-⑩]|[-–—•·*]|[（(][\d]+[)）])\s*/,'');
     if(!line)return null;
     var due=typeof extractDue==='function'?extractDue(line):null;
-    var category=v2CandidateCategory(line),dueMode=v2CandidateDueMode(line,due);
-    return {id:genId('c'),title:line.slice(0,120),category:category,projectId:'',priority:typeof detectPri==='function'?detectPri(line):'mid',dueMode:dueMode,dueAt:due?due+'T23:59:59':'',reminderAt:'',dueReminder:'none',followUpAt:(category==='waiting'&&due)?due+'T15:00':'',waitingFor:category==='waiting'?v2GuessWaitingFor(line):'',owner:'',reason:'本地规则预览',confidence:null,note:'',selected:category!=='ignore'};
+    var category=v2CandidateCategory(line),dueMode=v2CandidateDueMode(line,due),fixedDue=dueMode==='fixed'?due:null;
+    return {id:genId('c'),title:line.slice(0,120),category:category,projectId:'',priority:typeof detectPri==='function'?detectPri(line):'mid',dueMode:dueMode,dueAt:fixedDue?fixedDue+'T23:59:59':'',reminderAt:'',dueReminder:'none',followUpAt:'',waitingFor:category==='waiting'?v2GuessWaitingFor(line):'',owner:'',reason:'本地规则预览',confidence:null,note:'',selected:category!=='ignore'};
   }
   function analyzeInboxText(text){
     text=String(text||'').trim();
@@ -4365,8 +4365,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2CandidateFieldChange(el){
     var pair=v2UpdateCandidate(el);if(!pair)return;
     var field=el.getAttribute('data-v2-candidate-field'),value=el.type==='checkbox'?el.checked:el.value;
-    if(field==='dueAt')pair.candidate.dueAt=value?value+'T23:59:59':'';
-    else if(field==='dueMode'){pair.candidate.dueMode=value||'none';if(pair.candidate.dueMode!=='fixed')pair.candidate.dueAt='';}
+    if(field==='dueAt')pair.candidate.dueAt=(pair.candidate.dueMode==='fixed'&&value)?value+'T23:59:59':'';
+    else if(field==='dueMode'){pair.candidate.dueMode=['fixed','tbd','none'].indexOf(value)>=0?value:'none';if(pair.candidate.dueMode!=='fixed')pair.candidate.dueAt='';}
     else if(field==='reminderAt'||field==='followUpAt')pair.candidate[field]=value||'';
     else pair.candidate[field]=value;
     pair.entry.updatedAt=v2Now();save();
@@ -4901,7 +4901,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
       data.todos.unshift(t);v2EditingTaskId=t.id;
     }
     var oldSchedule=[v2DueMode(t),t.due,t.reminderAt,t.dueReminder,t.followUpAt].join('|');
-    var dueMode=$('taskEditDueMode').value,due=$('taskEditDue').value||null;
+    var dueMode=['fixed','tbd','none'].indexOf($('taskEditDueMode').value)>=0?$('taskEditDueMode').value:'none',due=$('taskEditDue').value||null;
     if(dueMode==='fixed'&&!due)dueMode='none';
     t.text=title;t.title=title;t.pid=$('taskEditProject').value||null;t.projectId=t.pid;t.pri=$('taskEditPriority').value;t.priority=t.pri;t.dueMode=dueMode;t.due=dueMode==='fixed'?due:null;t.dueAt=dueMode==='fixed'?due+'T23:59:59':null;t.reminderAt=$('taskEditReminder').value||null;t.dueReminder=$('taskEditDueReminder').value||'none';t.followUpAt=$('taskEditFollowUp').value||null;t.followUpNote=$('taskEditFollowUpNote').value.trim();t.waitingFor=$('taskEditWaitingFor').value.trim();t.owner=$('taskEditOwner').value.trim();
     var status=$('taskEditStatus').value;
