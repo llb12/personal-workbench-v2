@@ -1,14 +1,65 @@
 {
   "name": "personal-workbench",
   "version": "1.0.0",
-  "description": "Personal Workbench - local-first desktop workbench",
+  "productName": "个人工作台",
+  "description": "个人工作执行助手",
   "main": "main.js",
+  "appId": "com.personal.workbench",
   "author": "",
   "license": "MIT",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
   },
   "devDependencies": {
-    "electron": "43.4.1"
+    "electron": "43.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.personal.workbench",
+    "productName": "个人工作台",
+    "asar": true,
+    "compression": "normal",
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "ai-adapter.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "artifactName": "${productName} Setup ${version}.${ext}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "${productName}",
+      "uninstallDisplayName": "${productName}",
+      "runAfterFinish": false
+    },
+    "portable": {
+      "artifactName": "${productName} ${version}.${ext}"
+    }
   }
 }

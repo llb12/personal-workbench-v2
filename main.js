@@ -1,18 +1,153 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const url = require('url');
+const { pathToFileURL } = require('url');
+const { analyzeInboxWithAI, testAIConnection, runAIAction } = require('./ai-adapter');
 
-// 优化版数据独立存放，不与原版互相影响
-app.setPath('userData', path.join(app.getPath('appData'), 'personal-workbench-optimized'));
+// 普通运行使用独立的优化版目录；显式 --user-data-dir 供便携/干净用户测试隔离数据。
+const defaultUserDataPath = app.getPath('userData');
+const hasExplicitUserDataDir = typeof app.commandLine.hasSwitch === 'function' && app.commandLine.hasSwitch('user-data-dir');
+app.setPath('userData', hasExplicitUserDataDir ? defaultUserDataPath : path.join(app.getPath('appData'), 'personal-workbench-optimized'));
+
+// 启动路径和缓存路径都固定在用户可写目录，避免 Windows 临时目录或权限异常导致
+// Electron 启动时出现 cache/sessionData 错误；这里只创建目录，不清理任何业务数据。
+const sessionDataPath = path.join(app.getPath('userData'), 'sessionData');
+const cachePath = path.join(app.getPath('userData'), 'cache');
+try { fs.mkdirSync(sessionDataPath, { recursive: true }); } catch (_) { /* 启动时再由 Electron 报出实际错误 */ }
+try { fs.mkdirSync(cachePath, { recursive: true }); } catch (_) { /* 启动时再由 Electron 报出实际错误 */ }
+try { app.setPath('sessionData', sessionDataPath); } catch (_) { /* keep Electron default if unavailable */ }
+try { app.commandLine.appendSwitch('disk-cache-dir', cachePath); } catch (_) { /* keep Electron default if unavailable */ }
+
+// 单实例：重复点击启动脚本时只聚焦已有窗口，不创建第二份工作台。
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.exit(0);
 
 // 数据文件：%APPDATA%/personal-workbench-optimized/data.json
 function dataFile() {
   return path.join(app.getPath('userData'), 'data.json');
+}
+
+function aiConfigFile() {
+  return path.join(app.getPath('userData'), 'ai-config.json');
+}
+
+function backgroundsDir() {
+  return path.join(app.getPath('userData'), 'backgrounds');
+}
+
+const DEFAULT_AI_CONFIG = {
+  enabled: false,
+  baseUrl: 'https://api.openai.com/v1',
+  model: '',
+  timeoutMs: 30000,
+  privacyMode: 'compact',
+  maxContextItems: 80,
+  maxHistoryDays: 30,
+  maxMessageLength: 4000
+};
+let volatileAIKey = '';
+
+function readAIConfig() {
+  try {
+    const f = aiConfigFile();
+    if (!fs.existsSync(f)) return { ...DEFAULT_AI_CONFIG };
+    const obj = JSON.parse(fs.readFileSync(f, 'utf8'));
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { ...DEFAULT_AI_CONFIG };
+    return {
+      enabled: obj.enabled === true,
+      baseUrl: typeof obj.baseUrl === 'string' && obj.baseUrl.trim() ? obj.baseUrl.trim() : DEFAULT_AI_CONFIG.baseUrl,
+      model: typeof obj.model === 'string' ? obj.model.trim() : '',
+      timeoutMs: Number.isFinite(Number(obj.timeoutMs)) ? Math.max(3000, Math.min(120000, Math.round(Number(obj.timeoutMs)))) : DEFAULT_AI_CONFIG.timeoutMs,
+      privacyMode: ['full', 'compact', 'confirm'].includes(obj.privacyMode) ? obj.privacyMode : DEFAULT_AI_CONFIG.privacyMode,
+      maxContextItems: Number.isFinite(Number(obj.maxContextItems)) ? Math.max(10, Math.min(300, Math.round(Number(obj.maxContextItems)))) : DEFAULT_AI_CONFIG.maxContextItems,
+      maxHistoryDays: Number.isFinite(Number(obj.maxHistoryDays)) ? Math.max(1, Math.min(365, Math.round(Number(obj.maxHistoryDays)))) : DEFAULT_AI_CONFIG.maxHistoryDays,
+      maxMessageLength: Number.isFinite(Number(obj.maxMessageLength)) ? Math.max(500, Math.min(20000, Math.round(Number(obj.maxMessageLength)))) : DEFAULT_AI_CONFIG.maxMessageLength,
+      apiKeyCiphertext: typeof obj.apiKeyCiphertext === 'string' ? obj.apiKeyCiphertext : ''
+    };
+  } catch (_) {
+    return { ...DEFAULT_AI_CONFIG };
+  }
+}
+
+function isSecureStorageAvailable() {
+  try { return !!safeStorage && safeStorage.isEncryptionAvailable(); } catch (_) { return false; }
+}
+
+function writeJsonAtomic(file, value) {
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const tmp = file + '.tmp-' + process.pid;
+  fs.writeFileSync(tmp, JSON.stringify(value, null, 2), 'utf8');
+  fs.renameSync(tmp, file);
+}
+
+function readAIKey(config) {
+  if (volatileAIKey) return volatileAIKey;
+  if (!config || !config.apiKeyCiphertext || !isSecureStorageAvailable()) return '';
+  try { return safeStorage.decryptString(Buffer.from(config.apiKeyCiphertext, 'base64')); } catch (_) { return ''; }
+}
+
+function publicAIConfig(config) {
+  return {
+    enabled: !!config.enabled,
+    baseUrl: config.baseUrl || DEFAULT_AI_CONFIG.baseUrl,
+    model: config.model || '',
+    timeoutMs: config.timeoutMs || DEFAULT_AI_CONFIG.timeoutMs,
+    privacyMode: config.privacyMode || DEFAULT_AI_CONFIG.privacyMode,
+    maxContextItems: config.maxContextItems || DEFAULT_AI_CONFIG.maxContextItems,
+    maxHistoryDays: config.maxHistoryDays || DEFAULT_AI_CONFIG.maxHistoryDays,
+    maxMessageLength: config.maxMessageLength || DEFAULT_AI_CONFIG.maxMessageLength,
+    hasApiKey: !!readAIKey(config),
+    secureStorage: isSecureStorageAvailable()
+  };
+}
+
+function saveAIConfig(input) {
+  const current = readAIConfig();
+  const next = {
+    enabled: !!(input && input.enabled),
+    baseUrl: input && typeof input.baseUrl === 'string' && input.baseUrl.trim() ? input.baseUrl.trim() : DEFAULT_AI_CONFIG.baseUrl,
+    model: input && typeof input.model === 'string' ? input.model.trim() : '',
+    timeoutMs: input && Number.isFinite(Number(input.timeoutMs)) ? Math.max(3000, Math.min(120000, Math.round(Number(input.timeoutMs)))) : DEFAULT_AI_CONFIG.timeoutMs,
+    privacyMode: input && ['full', 'compact', 'confirm'].includes(input.privacyMode) ? input.privacyMode : (current.privacyMode || DEFAULT_AI_CONFIG.privacyMode),
+    maxContextItems: input && Number.isFinite(Number(input.maxContextItems)) ? Math.max(10, Math.min(300, Math.round(Number(input.maxContextItems)))) : (current.maxContextItems || DEFAULT_AI_CONFIG.maxContextItems),
+    maxHistoryDays: input && Number.isFinite(Number(input.maxHistoryDays)) ? Math.max(1, Math.min(365, Math.round(Number(input.maxHistoryDays)))) : (current.maxHistoryDays || DEFAULT_AI_CONFIG.maxHistoryDays),
+    maxMessageLength: input && Number.isFinite(Number(input.maxMessageLength)) ? Math.max(500, Math.min(20000, Math.round(Number(input.maxMessageLength)))) : (current.maxMessageLength || DEFAULT_AI_CONFIG.maxMessageLength)
+  };
+  const suppliedKey = input && typeof input.apiKey === 'string' && input.apiKey.trim();
+  if (input && input.clearApiKey === true) {
+    volatileAIKey = '';
+    delete next.apiKeyCiphertext;
+  } else if (suppliedKey) {
+    if (isSecureStorageAvailable()) {
+      next.apiKeyCiphertext = safeStorage.encryptString(input.apiKey).toString('base64');
+      volatileAIKey = '';
+    } else {
+      // 不安全时宁可只保留在本次进程内，也不明文写盘。
+      volatileAIKey = input.apiKey;
+    }
+  } else if (current.apiKeyCiphertext) {
+    next.apiKeyCiphertext = current.apiKeyCiphertext;
+  }
+  writeJsonAtomic(aiConfigFile(), next);
+  return publicAIConfig({ ...next, apiKeyCiphertext: next.apiKeyCiphertext || '' });
+}
+
+function aiRequestConfig(input, stored) {
+  const source = input && typeof input === 'object' ? input : {};
+  return {
+    baseUrl: typeof source.baseUrl === 'string' && source.baseUrl.trim() ? source.baseUrl.trim() : stored.baseUrl,
+    model: typeof source.model === 'string' && source.model.trim() ? source.model.trim() : stored.model,
+    timeoutMs: Number.isFinite(Number(source.timeoutMs)) ? Number(source.timeoutMs) : stored.timeoutMs
+  };
+}
+
+function aiFailure(error, fallback) {
+  const code = error && error.code ? error.code : '';
+  if (code === 'AI_NOT_CONFIGURED') return { engine: 'unconfigured', code, message: '尚未配置 AI 整理' };
+  return { engine: 'error', code: code || 'AI_ERROR', message: fallback || 'AI整理失败，原始内容已保留' };
 }
 
 const EMPTY = {
@@ -91,12 +226,21 @@ function createWindow() {
   win.on('closed', () => { win = null; });
 }
 
-app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+if (hasSingleInstanceLock) {
+  app.on('second-instance', () => {
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    if (!win.isVisible()) win.show();
+    win.focus();
   });
-});
+
+  app.whenReady().then(() => {
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -137,15 +281,20 @@ function isDateOrEmpty(value) {
     (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
+function isDateTimeOrEmpty(value) {
+  return value === null || value === undefined || value === '' ||
+    (typeof value === 'string' && !Number.isNaN(new Date(value).getTime()));
+}
+
 function validateImportData(obj) {
   if (!isPlainObject(obj)) {
     return '根节点必须是 JSON 对象';
   }
 
   const known = [
-    'todos', 'projects', 'events', 'note', 'kanban', 'theme', 'profile',
+    'todos', 'projects', 'events', 'inbox', 'note', 'kanban', 'theme', 'profile',
     'accent', 'layout', 'noteSample', 'city', 'weather', 'geo',
-    'bgPreset', 'bgCustom', 'focusId', 'snap'
+    'bgPreset', 'bgCustom', 'bgCustomPath', 'bgIntensity', 'bgBlur', 'bgCardOpacity', 'bgMode', 'focusId', 'snap'
   ];
   if (!known.some(key => Object.prototype.hasOwnProperty.call(obj, key))) {
     return '文件中没有可识别的工作台数据';
@@ -163,12 +312,33 @@ function validateImportData(obj) {
       if (t.pri !== undefined && !['high', 'mid', 'low'].includes(t.pri)) {
         return 'todos[' + i + '].pri 无效';
       }
+      if (t.priority !== undefined && !['high', 'mid', 'low'].includes(t.priority)) {
+        return 'todos[' + i + '].priority 无效';
+      }
+      if (t.status !== undefined && !['todo', 'doing', 'waiting', 'done', 'archived', 'inbox'].includes(t.status)) {
+        return 'todos[' + i + '].status 无效';
+      }
       if (!isDateOrEmpty(t.due)) return 'todos[' + i + '].due 日期格式无效';
+      if (t.dueMode !== undefined && !['fixed', 'tbd', 'none'].includes(t.dueMode)) {
+        return 'todos[' + i + '].dueMode 无效';
+      }
+      if (t.dueAt !== undefined && !isDateTimeOrEmpty(t.dueAt)) {
+        return 'todos[' + i + '].dueAt 日期格式无效';
+      }
       if (t.done !== undefined && typeof t.done !== 'boolean') {
         return 'todos[' + i + '].done 必须是布尔值';
       }
       if (t.blocked !== undefined && typeof t.blocked !== 'boolean') {
         return 'todos[' + i + '].blocked 必须是布尔值';
+      }
+      if (t.sourceId !== undefined && t.sourceId !== null && typeof t.sourceId !== 'string') {
+        return 'todos[' + i + '].sourceId 必须是字符串或 null';
+      }
+      if (t.completedAt !== undefined && !isDateTimeOrEmpty(t.completedAt)) {
+        return 'todos[' + i + '].completedAt 日期格式无效';
+      }
+      if (t.aiMeta !== undefined && !isPlainObject(t.aiMeta)) {
+        return 'todos[' + i + '].aiMeta 必须是对象';
       }
     }
   }
@@ -199,6 +369,21 @@ function validateImportData(obj) {
         if (isPlainObject(event) && event.text !== undefined && typeof event.text !== 'string') {
           return 'events.' + key + '[' + i + '].text 必须是字符串';
         }
+      }
+    }
+  }
+
+  if (obj.inbox !== undefined) {
+    if (!Array.isArray(obj.inbox)) return 'inbox 必须是数组';
+    if (obj.inbox.length > 100000) return 'inbox 数量超过允许上限';
+    for (let i = 0; i < obj.inbox.length; i += 1) {
+      const entry = obj.inbox[i];
+      if (!isPlainObject(entry)) return 'inbox[' + i + '] 必须是对象';
+      if (entry.rawText !== undefined && typeof entry.rawText !== 'string') {
+        return 'inbox[' + i + '].rawText 必须是字符串';
+      }
+      if (entry.candidates !== undefined && !Array.isArray(entry.candidates)) {
+        return 'inbox[' + i + '].candidates 必须是数组';
       }
     }
   }
@@ -246,105 +431,180 @@ ipcMain.handle('import-data', async () => {
 
 ipcMain.handle('get-data-path', () => dataFile());
 
-// ---- 通知→待办 AI 解析（桥接到外部 OpenAI 兼容 LLM，密钥仅存本地配置文件）----
-function pad2(n) { return String(n).padStart(2, '0'); }
-function wbTodayStr() { var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
-function wbWeekday() { return ['日', '一', '二', '三', '四', '五', '六'][new Date().getDay()]; }
-function readBridgeConfig() {
+// 自定义背景只复制到应用自己的目录；删除时也只允许删除该目录内的副本。
+function managedBackgroundPath(value) {
+  const base = path.resolve(backgroundsDir());
+  const target = path.resolve(String(value || ''));
+  const relative = path.relative(base, target);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return target;
+}
+
+function backgroundExtension(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  return ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'].includes(ext) ? ext : null;
+}
+
+ipcMain.handle('background-choose', async () => {
   try {
-    var f = path.join(__dirname, 'bridge.config.json');
-    if (!fs.existsSync(f)) return null;
-    var j = JSON.parse(fs.readFileSync(f, 'utf8'));
-    if (!j || !j.baseUrl || !j.apiKey) return null;
-    return j;
-  } catch (e) { return null; }
-}
-function wbNormalizeDue(s) {
-  if (s === null || s === undefined || s === '') return null;
-  var str = String(s).trim();
-  if (/^null$/i.test(str)) return null;
-  var m = str.match(/(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})/);
-  if (m) { var y = +m[1], mo = +m[2], d = +m[3]; if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return y + '-' + pad2(mo) + '-' + pad2(d); }
-  var dt = new Date(str);
-  if (!isNaN(dt.getTime())) return dt.getFullYear() + '-' + pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate());
-  return null;
-}
-function wbCallLLM(cfg, systemMsg, userMsg) {
-  return new Promise(function (resolve, reject) {
-    var base = String(cfg.baseUrl).replace(/\/+$/, '');
-    var u;
-    try { u = new url.URL(base + '/chat/completions'); } catch (e) { return reject(new Error('baseUrl 格式错误')); }
-    var body = JSON.stringify({
-      model: cfg.model || '',
-      messages: [
-        { role: 'system', content: systemMsg },
-        { role: 'user', content: userMsg }
-      ],
-      temperature: cfg.temperature || 0.2
+    const res = await dialog.showOpenDialog(win, {
+      title: '选择工作台背景图片',
+      properties: ['openFile'],
+      filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }]
     });
-    var lib = u.protocol === 'https:' ? https : http;
-    var req = lib.request(u, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (cfg.apiKey || '') }
-    }, function (res) {
-      var data = '';
-      res.on('data', function (c) { data += c; });
-      res.on('end', function () {
-        try {
-          var j = JSON.parse(data);
-          var c = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
-          if (typeof c !== 'string') return reject(new Error('LLM 返回格式异常'));
-          resolve(c);
-        } catch (e) { reject(new Error('解析 LLM 响应失败: ' + e.message)); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout((cfg.timeoutMs || 30000), function () { req.destroy(new Error('LLM 请求超时')); });
-    req.write(body);
-    req.end();
-  });
-}
-function wbBuildSystem() {
-  return '你是一个“通知转待办”提取器，专门处理中文公文/通知/工作群消息。\n'
-    + '当前日期：' + wbTodayStr() + '（周' + wbWeekday() + '）。\n'
-    + '任务：从用户给出的通知正文中，提取所有“需要去执行/办理”的待办事项。\n\n'
-    + '规则：\n'
-    + '- 只提取可执行动作（含“请/需/要求/于X前/截止/提交/完成/报送/填报/核对/上报/准备/落实/办理/反馈/确认/参加/整改/审批/汇总/整理/撰写”等动词）。\n'
-    + '- 忽略：标题/文号、落款署名（如“人力资源部”）、联系方式、见附件说明、此致敬礼、抄送、纯背景描述。\n'
-    + '- 每条输出：\n'
-    + '  text：精简后的任务描述（去除编号/项目符号，保留核心动作与对象，≤40字）\n'
-    + '  pri：优先级 high(紧急/务必/立即/限期/特急/严禁) / low(建议/可选/视情况/可延后/暂不) / mid(其它)\n'
-    + '  due：截止日期 ISO YYYY-MM-DD；文中无明确期限则为 null；相对日期（明天/周五/月底/下周三）按当前日期推算\n'
-    + '  owner：责任部门或人（文中明确提到才填），否则 null\n'
-    + '  note：补充说明（如“详见附件”），否则 null\n'
-    + '- 只输出一个 JSON 对象：{"todos":[...]}，不要任何解释、不要 markdown 代码块。';
-}
-ipcMain.handle('parse-notice', async function (_evt, text) {
-  var cfg = readBridgeConfig();
-  if (!cfg) return { engine: 'none' };
-  try {
-    var content = await wbCallLLM(cfg, wbBuildSystem(), String(text || ''));
-    if (!content) return { engine: 'none' };
-    var raw = content.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-    var obj = null;
-    try { obj = JSON.parse(raw); } catch (e) {
-      var mm = raw.match(/\{[\s\S]*\}/);
-      if (mm) { try { obj = JSON.parse(mm[0]); } catch (e2) { obj = null; } }
-    }
-    if (!obj || !Array.isArray(obj.todos)) return { engine: 'ai', todos: [] };
-    var todos = obj.todos.filter(function (t) { return t && t.text; }).map(function (t) {
-      return {
-        text: String(t.text).trim(),
-        pri: (/^(high|mid|low)$/.test(t.pri) ? t.pri : 'mid'),
-        due: wbNormalizeDue(t.due),
-        owner: (t.owner || null),
-        note: (t.note || null)
-      };
-    });
-    return { engine: 'ai', todos: todos };
-  } catch (e) {
-    return { engine: 'none', error: String((e && e.message) || e) };
+    if (res.canceled || !res.filePaths || !res.filePaths[0]) return null;
+    const source = res.filePaths[0];
+    const ext = backgroundExtension(source);
+    if (!ext) return { error: '背景图片格式不支持' };
+    const stat = fs.statSync(source);
+    if (!stat.isFile()) return { error: '所选内容不是文件' };
+    if (stat.size > 20 * 1024 * 1024) return { error: '背景图片超过 20 MB' };
+    const dir = backgroundsDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const destination = path.join(dir, 'background-' + Date.now() + '-' + process.pid + ext);
+    fs.copyFileSync(source, destination);
+    return { path: destination, url: pathToFileURL(destination).toString() };
+  } catch (error) {
+    return { error: '背景图片保存失败：' + (error && error.message ? error.message : '未知错误') };
   }
+});
+
+ipcMain.handle('background-remove', (_evt, value) => {
+  try {
+    const target = managedBackgroundPath(value);
+    if (!target) return { ok: false, error: '只能清除应用管理的背景副本' };
+    if (fs.existsSync(target)) fs.unlinkSync(target);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: '背景副本清除失败' };
+  }
+});
+
+ipcMain.handle('background-directory', () => {
+  try {
+    fs.mkdirSync(backgroundsDir(), { recursive: true });
+  } catch (_) { /* 目录创建失败由实际上传时反馈 */ }
+  return backgroundsDir();
+});
+
+// ---- AI Provider IPC：密钥只在主进程使用，不进入工作台 data.json ----
+function aiLogFile() {
+  return path.join(app.getPath('userData'), 'ai-logs.jsonl');
+}
+
+function appendAILog(entry) {
+  // 日志只记录操作元数据，不写入 API Key、完整上下文或 AI 原文。
+  try {
+    const safe = {
+      action: String(entry && entry.action || '').slice(0, 60),
+      time: new Date().toISOString(),
+      success: entry && entry.success === true,
+      failure: entry && entry.success === true ? '' : String(entry && entry.failure || 'AI_ERROR').slice(0, 60),
+      model: String(entry && entry.model || '').slice(0, 120),
+      durationMs: Math.max(0, Math.round(Number(entry && entry.durationMs) || 0))
+    };
+    fs.appendFileSync(aiLogFile(), JSON.stringify(safe) + '\n', 'utf8');
+  } catch (_) { /* 日志失败不能影响正常任务和 AI 返回 */ }
+}
+
+ipcMain.handle('ai-get-config', () => publicAIConfig(readAIConfig()));
+
+ipcMain.handle('ai-save-config', (_evt, input) => {
+  try {
+    return { ok: true, config: saveAIConfig(input || {}) };
+  } catch (_) {
+    return { ok: false, message: 'AI 设置保存失败' };
+  }
+});
+
+ipcMain.handle('ai-clear-key', () => {
+  try {
+    return { ok: true, config: saveAIConfig({ ...readAIConfig(), clearApiKey: true }) };
+  } catch (_) {
+    return { ok: false, message: 'API Key 清除失败' };
+  }
+});
+
+ipcMain.handle('ai-test-connection', async (_evt, input) => {
+  const startedAt = Date.now();
+  const stored = readAIConfig();
+  const source = input && typeof input === 'object' ? input : {};
+  const apiKey = typeof source.apiKey === 'string' && source.apiKey ? source.apiKey : readAIKey(stored);
+  if (!apiKey) {
+    appendAILog({ action: 'testConnection', success: false, failure: 'AI_NOT_CONFIGURED', model: stored.model, durationMs: Date.now() - startedAt });
+    return { ok: false, code: 'AI_NOT_CONFIGURED', message: '尚未配置 AI 整理' };
+  }
+  try {
+    await testAIConnection({ config: aiRequestConfig(source, stored), apiKey });
+    appendAILog({ action: 'testConnection', success: true, model: stored.model, durationMs: Date.now() - startedAt });
+    return { ok: true, message: '连接成功' };
+  } catch (error) {
+    appendAILog({ action: 'testConnection', success: false, failure: error && error.code, model: stored.model, durationMs: Date.now() - startedAt });
+    return { ok: false, ...aiFailure(error, '连接失败，请检查 API 地址、模型名称和 API Key') };
+  }
+});
+
+ipcMain.handle('ai-organize-inbox', async (_evt, payload) => {
+  const startedAt = Date.now();
+  const stored = readAIConfig();
+  if (!stored.enabled) {
+    appendAILog({ action: 'analyzeInbox', success: false, failure: 'AI_DISABLED', model: stored.model, durationMs: Date.now() - startedAt });
+    return { engine: 'unconfigured', code: 'AI_DISABLED', message: 'AI 整理尚未启用' };
+  }
+  const apiKey = readAIKey(stored);
+  if (!apiKey) {
+    appendAILog({ action: 'analyzeInbox', success: false, failure: 'AI_NOT_CONFIGURED', model: stored.model, durationMs: Date.now() - startedAt });
+    return { engine: 'unconfigured', code: 'AI_NOT_CONFIGURED', message: '尚未配置 AI 整理' };
+  }
+  try {
+    const result = await analyzeInboxWithAI({
+      text: payload && payload.text,
+      currentDate: payload && payload.currentDate,
+      projects: payload && payload.projects,
+      existingTasks: payload && payload.existingTasks,
+      config: stored,
+      apiKey
+    });
+    appendAILog({ action: 'analyzeInbox', success: true, model: stored.model, durationMs: Date.now() - startedAt });
+    return result;
+  } catch (error) {
+    appendAILog({ action: 'analyzeInbox', success: false, failure: error && error.code, model: stored.model, durationMs: Date.now() - startedAt });
+    return aiFailure(error, 'AI整理失败，原始内容已保留');
+  }
+});
+
+ipcMain.handle('ai-run-action', async (_evt, input) => {
+  const source = input && typeof input === 'object' ? input : {};
+  const action = typeof source.action === 'string' ? source.action.trim() : '';
+  const stored = readAIConfig();
+  const startedAt = Date.now();
+  if (!stored.enabled) {
+    appendAILog({ action, success: false, failure: 'AI_DISABLED', model: stored.model, durationMs: Date.now() - startedAt });
+    return { engine: 'unconfigured', code: 'AI_DISABLED', message: 'AI 助手尚未启用' };
+  }
+  const apiKey = readAIKey(stored);
+  if (!apiKey) {
+    appendAILog({ action, success: false, failure: 'AI_NOT_CONFIGURED', model: stored.model, durationMs: Date.now() - startedAt });
+    return { engine: 'unconfigured', code: 'AI_NOT_CONFIGURED', message: '尚未配置 AI 整理' };
+  }
+  try {
+    const result = await runAIAction({
+      action,
+      payload: source.payload && typeof source.payload === 'object' ? source.payload : {},
+      config: stored,
+      apiKey
+    });
+    appendAILog({ action, success: true, model: stored.model, durationMs: Date.now() - startedAt });
+    return result;
+  } catch (error) {
+    appendAILog({ action, success: false, failure: error && error.code, model: stored.model, durationMs: Date.now() - startedAt });
+    return aiFailure(error, 'AI 操作失败，原始内容已保留');
+  }
+});
+
+ipcMain.handle('parse-notice', async function () {
+  // 兼容旧面板的 IPC 名称；V2.1 统一走 window.workbench.ai。
+  return { engine: 'disabled', error: 'V2 当前仅使用本地整理预览' };
 });
 
 // 桌面通知：启动时提醒逾期任务与今日日程
