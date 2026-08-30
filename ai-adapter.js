@@ -134,11 +134,18 @@ function responseContent(response) {
   throw adapterError('AI_INVALID_RESPONSE', 'AI 返回结构不完整');
 }
 
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function parseJsonContent(content) {
   const raw = String(content || '').trim();
-  try { return JSON.parse(raw); } catch (_) {
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (_) {
     throw adapterError('AI_RESPONSE_INVALID', 'AI 返回内容不是有效 JSON');
   }
+  if (!isPlainObject(parsed)) throw adapterError('AI_RESPONSE_INVALID', 'AI 返回内容不是对象');
+  return parsed;
 }
 
 function normalizeDueDate(value) {
@@ -299,12 +306,25 @@ function requireObject(value) {
   return value;
 }
 
+function validateCandidateItems(value) {
+  if (!Array.isArray(value)) {
+    throw adapterError('AI_RESPONSE_INVALID', 'AI 返回内容中的 items 必须是数组');
+  }
+  if (value.length > 50) {
+    throw adapterError('AI_RESPONSE_INVALID', 'AI 返回内容中的 items 不得超过 50 项');
+  }
+  if (value.some(item => !isPlainObject(item))) {
+    throw adapterError('AI_RESPONSE_INVALID', 'AI 返回内容中的 items 必须全部是对象');
+  }
+  return value;
+}
+
 function normalizeItemsResult(parsed) {
   const obj = requireObject(parsed);
-  if (!Array.isArray(obj.items)) throw adapterError('AI_INVALID_RESPONSE', 'AI 返回内容缺少 items');
+  const items = validateCandidateItems(obj.items);
   return {
     engine: 'ai',
-    items: obj.items.map(normalizeItem).filter(Boolean).slice(0, 30),
+    items: items.map(normalizeItem).filter(Boolean),
     warnings: warningsFrom(obj.warnings)
   };
 }
