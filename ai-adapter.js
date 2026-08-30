@@ -11,6 +11,12 @@ const https = require('https');
 const { URL } = require('url');
 
 const TYPES = new Set(['todo', 'confirm', 'waiting', 'ignore']);
+const PRIORITIES = new Set(['high', 'mid', 'low']);
+const DUE_MODES = new Set(['fixed', 'tbd', 'none']);
+const ITEM_FIELDS = new Set([
+  'title', 'type', 'priority', 'dueMode', 'dueAt', 'reminderAt',
+  'waitingFor', 'followUpAt', 'projectSuggestion', 'owner', 'reason', 'confidence'
+]);
 const AI_ACTIONS = new Set([
   'analyzeInbox',
   'parseQuickCapture',
@@ -148,45 +154,84 @@ function parseJsonContent(content) {
   return parsed;
 }
 
+function isCalendarDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T00:00:00Z');
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function invalidItem(field) {
+  throw adapterError('AI_RESPONSE_INVALID', 'AI 返回的 item 字段无效：' + field);
+}
+
 function normalizeDueDate(value) {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw.slice(0, 10);
-  const date = new Date(raw);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+  return isCalendarDate(value) ? value : null;
 }
 
 function normalizeDateTime(value) {
-  if (!value) return null;
-  const raw = String(value).trim().replace(' ', 'T');
-  const date = new Date(raw);
+  if (typeof value !== 'string') return null;
+  const match = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match || !isCalendarDate(match[1])) return null;
+  const zone = match[2];
+  if (zone !== 'Z' &&
+      (Number(zone.slice(1, 3)) > 23 || Number(zone.slice(4, 6)) > 59)) return null;
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function normalizeItemText(raw, field, limit) {
+  const value = raw[field];
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') invalidItem(field);
+  return value.trim().slice(0, limit);
+}
+
 function normalizeItem(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const title = String(raw.title || raw.text || '').trim().slice(0, 160);
-  if (!title) return null;
-  const type = TYPES.has(raw.type) ? raw.type : (TYPES.has(raw.category) ? raw.category : 'confirm');
-  const priority = raw.priority === 'high' ? 'high' : (raw.priority === 'low' ? 'low' : 'mid');
-  let dueMode = raw.dueMode === 'fixed' || raw.dueMode === 'tbd' || raw.dueMode === 'none'
-    ? raw.dueMode : (raw.dueAt ? 'fixed' : 'none');
-  const dueAt = normalizeDueDate(raw.dueAt);
-  if (dueMode === 'fixed' && !dueAt) dueMode = 'none';
+  if (!isPlainObject(raw)) invalidItem('object');
+  if (Object.keys(raw).some(key => !ITEM_FIELDS.has(key))) invalidItem('unknown field');
+  if (typeof raw.title !== 'string') invalidItem('title');
+  const title = raw.title.trim();
+  if (!title || title.length > 160) invalidItem('title');
+  if (!TYPES.has(raw.type)) invalidItem('type');
+  if (!PRIORITIES.has(raw.priority)) invalidItem('priority');
+  if (!DUE_MODES.has(raw.dueMode)) invalidItem('dueMode');
+
+  let dueAt = null;
+  if (raw.dueMode === 'fixed') {
+    dueAt = normalizeDueDate(raw.dueAt);
+    if (!dueAt) invalidItem('dueAt');
+  } else if (raw.dueAt !== undefined && raw.dueAt !== null) {
+    invalidItem('dueAt');
+  }
+
+  const reminderAt = raw.reminderAt === undefined || raw.reminderAt === null
+    ? null : normalizeDateTime(raw.reminderAt);
+  if (raw.reminderAt !== undefined && raw.reminderAt !== null && !reminderAt) {
+    invalidItem('reminderAt');
+  }
+  const followUpAt = raw.followUpAt === undefined || raw.followUpAt === null
+    ? null : normalizeDateTime(raw.followUpAt);
+  if (raw.followUpAt !== undefined && raw.followUpAt !== null && !followUpAt) {
+    invalidItem('followUpAt');
+  }
+  const confidence = raw.confidence === undefined || raw.confidence === null ? null : raw.confidence;
+  if (confidence !== null &&
+      (typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)) {
+    invalidItem('confidence');
+  }
   return {
     title,
-    type,
-    priority,
-    dueMode,
-    dueAt: dueMode === 'fixed' ? dueAt : null,
-    reminderAt: normalizeDateTime(raw.reminderAt),
-    waitingFor: String(raw.waitingFor || '').trim().slice(0, 80),
-    followUpAt: normalizeDateTime(raw.followUpAt),
-    projectSuggestion: String(raw.projectSuggestion || '').trim().slice(0, 80),
-    owner: String(raw.owner || '').trim().slice(0, 80),
-    reason: String(raw.reason || '').trim().slice(0, 240),
-    confidence: Number.isFinite(Number(raw.confidence)) ? Math.max(0, Math.min(1, Number(raw.confidence))) : null
+    type: raw.type,
+    priority: raw.priority,
+    dueMode: raw.dueMode,
+    dueAt,
+    reminderAt,
+    waitingFor: normalizeItemText(raw, 'waitingFor', 80),
+    followUpAt,
+    projectSuggestion: normalizeItemText(raw, 'projectSuggestion', 80),
+    owner: normalizeItemText(raw, 'owner', 80),
+    reason: normalizeItemText(raw, 'reason', 240),
+    confidence
   };
 }
 
@@ -324,7 +369,7 @@ function normalizeItemsResult(parsed) {
   const items = validateCandidateItems(obj.items);
   return {
     engine: 'ai',
-    items: items.map(normalizeItem).filter(Boolean),
+    items: items.map(normalizeItem),
     warnings: warningsFrom(obj.warnings)
   };
 }
