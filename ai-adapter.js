@@ -47,6 +47,13 @@ function endpointFor(baseUrl) {
   if (endpoint.protocol !== 'http:' && endpoint.protocol !== 'https:') {
     throw adapterError('AI_CONFIG_INVALID', 'API 地址必须使用 HTTP 或 HTTPS');
   }
+  const hostname = endpoint.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (endpoint.protocol === 'http:' &&
+      hostname !== 'localhost' &&
+      hostname !== '127.0.0.1' &&
+      hostname !== '::1') {
+    throw adapterError('AI_INSECURE_URL', '仅允许 HTTPS 或本机 HTTP');
+  }
   return endpoint;
 }
 
