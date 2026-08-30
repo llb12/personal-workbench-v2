@@ -82,8 +82,20 @@ function requestChat(config, apiKey, messages, options) {
     };
     const req = transport.request(endpoint, { method: 'POST', headers }, res => {
       let response = '';
+      let responseBytes = 0;
       res.setEncoding('utf8');
-      res.on('data', chunk => { response += chunk; });
+      res.on('data', chunk => {
+        if (settled) return;
+        const chunkBytes = Buffer.byteLength(chunk, 'utf8');
+        if (responseBytes + chunkBytes > 512 * 1024) {
+          finish(reject, adapterError('AI_RESPONSE_TOO_LARGE', 'AI 响应过大'));
+          req.destroy();
+          res.destroy();
+          return;
+        }
+        responseBytes += chunkBytes;
+        response += chunk;
+      });
       res.on('end', () => {
         if (res.statusCode < 200 || res.statusCode >= 300) {
           finish(reject, adapterError('AI_HTTP_ERROR', 'AI 服务返回错误'));
@@ -123,14 +135,10 @@ function responseContent(response) {
 }
 
 function parseJsonContent(content) {
-  const raw = String(content || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  try { return JSON.parse(raw); } catch (_) { /* try the first JSON object below */ }
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start >= 0 && end > start) {
-    try { return JSON.parse(raw.slice(start, end + 1)); } catch (_) { /* handled below */ }
+  const raw = String(content || '').trim();
+  try { return JSON.parse(raw); } catch (_) {
+    throw adapterError('AI_RESPONSE_INVALID', 'AI 返回内容不是有效 JSON');
   }
-  throw adapterError('AI_INVALID_RESPONSE', 'AI 返回内容无法解析');
 }
 
 function normalizeDueDate(value) {
