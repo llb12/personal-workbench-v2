@@ -861,8 +861,20 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-status-item:first-of-type b{color:var(--primary)}
 .v2-status i{width:3px;height:3px;background:var(--muted2);border-radius:50%;opacity:.75;margin:0 3px}
 .v2-content{flex:1;min-height:0;padding-top:1px}
-.v2-home-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.9fr);gap:10px 14px;align-items:start}
-.v2-home-done{grid-column:1/-1}
+.v2-home-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-flow:row dense;gap:10px 14px;align-items:start;align-content:start}
+.v2-home-grid > .v2-card,.v2-home-grid > .v2-home-compact-status{min-width:0}
+.v2-home-focus{grid-column:span 7}
+.v2-home-inbox{grid-column:span 5}
+.v2-home-upcoming{grid-column:span 7}
+.v2-home-week{grid-column:span 5}
+.v2-home-quick{grid-column:span 4}
+.v2-home-waiting{grid-column:span 5}
+.v2-home-done{grid-column:span 7}
+.v2-home-done.is-compact{grid-column:span 4}
+.v2-home-done.is-rich{grid-column:span 7}
+.v2-home-records{grid-column:span 7}
+.v2-home-reminders{grid-column:span 5}
+.v2-home-smart{grid-column:span 5}
 .v2-card{background:color-mix(in srgb,var(--card) 96%,transparent);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(16,30,54,.05),0 5px 16px rgba(16,30,54,.035);min-width:0;overflow:hidden}
 .v2-card.primary{border-color:color-mix(in srgb,var(--primary) 38%,var(--line));box-shadow:0 2px 4px color-mix(in srgb,var(--primary) 8%,transparent),0 8px 22px color-mix(in srgb,var(--primary) 9%,transparent)}
 .v2-card-head{display:flex;align-items:center;gap:9px;padding:12px 16px 9px;border-bottom:1px solid var(--line2)}
@@ -932,6 +944,11 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-upcoming-date{color:var(--muted);font-size:10.5px;white-space:nowrap}.v2-upcoming-row .v2-mini-title{font-size:12.25px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-upcoming-row .v2-mini-sub{display:none}
 .v2-done-row{align-items:center}.v2-done-time{width:43px;flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}.v2-done-title{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v2-done-project{flex:none}
 .v2-home-actions{display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--line2)}.v2-home-actions .btn-primary,.v2-home-actions .btn-ghost{height:30px;padding:0 10px;font-size:11.5px}.v2-focus-actions .v2-link{margin-left:auto}.v2-home-ai-result{margin:0 16px 8px}.v2-home-ai-result .v2-ai-answer{margin-top:0}
+.v2-home-done.is-compact .v2-card-head{padding-top:8px;padding-bottom:6px}.v2-home-done.is-compact .v2-done-list{padding-top:1px;padding-bottom:2px}.v2-home-done.is-compact .v2-done-row{padding-top:5px;padding-bottom:5px}
+.v2-home-compact-status{display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px;background:color-mix(in srgb,var(--card) 84%,var(--primary-soft));color:var(--muted);box-shadow:0 1px 2px rgba(16,30,54,.03);min-width:0}.v2-home-compact-status .v2-compact-icon{width:23px;height:23px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary);font-size:11px;font-weight:800;flex:none}.v2-home-compact-status .v2-compact-copy{flex:1;min-width:0}.v2-home-compact-status .v2-compact-copy strong{display:block;color:var(--text);font-size:11.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-home-compact-status .v2-compact-copy span{display:block;margin-top:2px;font-size:10.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-home-compact-status .v2-head-action{margin-left:auto;white-space:nowrap;flex:none}
+.v2-quick-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:10px 12px 12px}.v2-quick-link{display:flex;align-items:center;gap:7px;min-width:0;padding:8px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--muted);font-size:11.5px;text-align:left;transition:background .14s,border-color .14s,color .14s}.v2-quick-link:hover{background:var(--primary-soft);border-color:color-mix(in srgb,var(--primary) 25%,var(--line));color:var(--primary)}.v2-quick-icon{width:18px;color:var(--primary);font-size:14px;line-height:1;text-align:center;flex:none}.v2-quick-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v2-week-list{padding:3px 8px 8px}.v2-week-row{display:grid;grid-template-columns:66px 38px minmax(0,1fr);align-items:center;gap:7px;padding:7px 8px;border-bottom:1px solid var(--line2);min-width:0}.v2-week-row:last-child{border-bottom:none}.v2-week-date{color:var(--primary);font-size:10.5px;font-weight:750;white-space:nowrap}.v2-week-kind{font-size:10px;color:var(--muted);white-space:nowrap}.v2-week-kind.event{color:var(--primary)}.v2-week-kind.followup{color:var(--warn)}.v2-week-text{min-width:0;color:var(--text);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-record-mini-list{padding:3px 8px 8px}.v2-record-mini-row{display:flex;align-items:center;gap:8px;padding:7px 8px;border-bottom:1px solid var(--line2);min-width:0}.v2-record-mini-row:last-child{border-bottom:none}.v2-record-mini-date{width:54px;flex:none;color:var(--muted);font-size:10.5px;font-variant-numeric:tabular-nums}.v2-record-mini-title{flex:1;min-width:0;color:var(--text);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-record-mini-row .v2-chip{max-width:35%;min-width:0;overflow:hidden;text-overflow:ellipsis}.v2-reminder-summary-stats{display:flex;gap:7px;padding:9px 12px 6px}.v2-reminder-stat{flex:1;min-width:0;padding:7px 8px;border-radius:8px;background:var(--hover)}.v2-reminder-stat b{display:block;color:var(--primary);font-size:17px;line-height:1.15;font-variant-numeric:tabular-nums}.v2-reminder-stat span{display:block;margin-top:2px;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-reminder-stat.due b{color:var(--danger)}.v2-reminder-stat.snooze b{color:var(--warn)}.v2-reminder-mini-list{padding:2px 8px 8px}.v2-reminder-mini-row{display:flex;align-items:center;gap:7px;padding:6px 8px;border-bottom:1px solid var(--line2);min-width:0}.v2-reminder-mini-row:last-child{border-bottom:none}.v2-reminder-mini-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);flex:none}.v2-reminder-mini-dot.due{background:var(--danger)}.v2-reminder-mini-dot.snooze{background:var(--warn)}.v2-reminder-mini-main{min-width:0;flex:1}.v2-reminder-mini-title{display:block;color:var(--text);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-reminder-mini-meta{display:block;color:var(--muted);font-size:10px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v2-home-smart .v2-card-head p{color:var(--primary);font-size:10.5px}.v2-smart-text{flex:1;min-width:0;line-height:1.45;word-break:break-word}
 .v2-card-more{display:block;width:calc(100% - 32px);margin:2px 16px 9px;padding:6px 0;border-top:1px solid var(--line2);color:var(--primary);font-size:11px;text-align:left}.v2-card-more:hover{color:var(--primary-d)}
 .v2-home-risk{display:flex;align-items:center;gap:7px;min-height:28px;margin:0 2px 0;padding:4px 9px;border:1px solid color-mix(in srgb,var(--warn) 38%,var(--line));border-radius:8px;background:color-mix(in srgb,var(--warn-soft) 45%,var(--card));color:var(--muted);font-size:11px}.v2-home-risk-icon{color:var(--warn);font-size:12px;line-height:1}.v2-home-risk-label{color:var(--text);font-weight:650;white-space:nowrap}.v2-home-risk button{display:inline-flex;align-items:center;gap:3px;padding:2px 3px;border-radius:4px;color:var(--muted);font-size:11px;white-space:nowrap}.v2-home-risk button:hover{background:var(--card);color:var(--primary)}.v2-home-risk button.danger{color:var(--danger)}.v2-home-risk button.warn{color:var(--warn)}.v2-home-risk button.primary{color:var(--primary)}.v2-home-risk-sep{color:var(--muted2)}.v2-hint-glyph{font-size:10.5px;line-height:1}
 .v2-ai-card{padding:15px 16px}.v2-ai-card h2{font-size:14px}.v2-ai-card p{margin-top:4px;color:var(--muted);font-size:11.5px;line-height:1.6}.v2-ai-query{display:flex;gap:7px;margin-top:11px}.v2-ai-query .inp{flex:1;min-width:0}.v2-ai-answer{margin-top:10px;padding:10px 11px;border-radius:9px;background:var(--hover);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word}.v2-ai-answer:empty{display:none}.v2-ai-answer strong{display:block;font-size:11px;color:var(--primary);margin-bottom:3px}.v2-ai-bullets{margin:5px 0 0 17px;color:var(--muted)}.v2-ai-sources{margin-top:7px;color:var(--muted2);font-size:10.5px}.ai-preview-raw{display:block;margin-top:4px;padding:7px 8px;border-left:2px solid var(--primary);white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:11px}.v2-risk-strip{margin-top:11px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--warn-soft) 42%,var(--card));font-size:11px}.v2-risk-head{display:flex;align-items:center;gap:7px}.v2-risk-head strong{color:var(--warn);font-size:11px}.v2-risk-head span{color:var(--muted2);font-size:10px}.v2-risk-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.v2-risk-item{padding:3px 7px;border-radius:999px;background:var(--card);color:var(--muted);border:1px solid var(--line2)}.v2-risk-none{color:var(--ok);font-size:11px}.v2-reserved-note{margin-top:9px;color:var(--muted2);font-size:10px;line-height:1.5}.v2-smart-list{padding:4px 8px 8px}.v2-smart-row{display:flex;align-items:center;gap:8px;width:100%;padding:9px 8px;border-bottom:1px solid var(--line2);color:var(--muted);font-size:11.5px;text-align:left;border-radius:6px}.v2-smart-row:last-child{border-bottom:none}.v2-smart-row:hover{background:var(--hover);color:var(--text)}.v2-smart-icon{width:19px;text-align:center;font-size:13px}.v2-smart-row.danger .v2-smart-icon,.v2-smart-row.danger .v2-smart-open{color:var(--danger)}.v2-smart-row.warn .v2-smart-icon,.v2-smart-row.warn .v2-smart-open{color:var(--warn)}.v2-smart-row.primary .v2-smart-icon,.v2-smart-row.primary .v2-smart-open{color:var(--primary)}.v2-smart-open{margin-left:auto;font-size:10px;color:var(--primary)}
@@ -941,7 +958,7 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-capture-card{padding:16px}.v2-capture-card h2{font-size:15px}.v2-capture-card p{font-size:11.5px;color:var(--muted);margin:5px 0 12px;line-height:1.65}
 .v2-textarea{width:100%;min-height:148px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--input-bg);padding:11px 12px;line-height:1.7;color:var(--text);font-family:inherit;font-size:13px}.v2-textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
 .v2-capture-foot{display:flex;align-items:center;gap:8px;margin-top:10px}.v2-capture-foot span{font-size:10.5px;color:var(--muted2);flex:1}.v2-capture-foot .btn-primary,.v2-capture-foot .btn-ghost{height:34px}.v2-capture-actions{display:flex;gap:7px;flex:none}
-.v2-ai-notice{margin-top:12px;padding:10px 11px;border-radius:9px;background:var(--warn-soft);color:var(--muted);font-size:11.5px;line-height:1.6}.v2-ai-notice strong{display:block;color:var(--text);font-size:12px}.v2-ai-notice .v2-ai-actions{display:flex;gap:7px;margin-top:7px}
+.v2-ai-notice{display:flex;align-items:center;gap:7px;margin-top:8px;padding:6px 8px;border:1px solid color-mix(in srgb,var(--warn) 32%,var(--line));border-radius:7px;background:color-mix(in srgb,var(--warn-soft) 55%,var(--card));color:var(--muted);font-size:10.5px;line-height:1.4}.v2-ai-notice strong{display:inline;color:var(--warn);font-size:11px;white-space:nowrap}.v2-ai-notice .v2-ai-actions{display:flex;align-items:center;gap:4px;margin:0 0 0 auto;flex:none}.v2-ai-notice .v2-ai-actions .btn-ghost{height:25px;padding:0 7px;font-size:10px}
 .v2-candidate-insight{margin-top:7px;color:var(--muted);font-size:10.5px;line-height:1.5}
 .v2-duplicate-note{color:var(--warn);font-weight:700}
 .v2-inbox-list-card{min-width:0}.v2-inbox-item{border-bottom:1px solid var(--line2);padding:13px 15px}.v2-inbox-item:last-child{border-bottom:none}.v2-inbox-item-head{display:flex;align-items:center;gap:8px}.v2-inbox-item-head strong{font-size:12.5px;flex:1;min-width:0}.v2-inbox-item-head time{color:var(--muted2);font-size:10.5px;white-space:nowrap}.v2-inbox-raw{margin-top:7px;padding:8px 10px;border-radius:8px;background:var(--hover);color:var(--muted);font-size:12px;line-height:1.65;white-space:pre-wrap;word-break:break-word;max-height:100px;overflow:auto}.v2-inbox-item-actions{display:flex;gap:7px;margin-top:9px}.v2-inbox-item-actions button{font-size:11px;padding:3px 8px;border-radius:6px;color:var(--muted)}.v2-inbox-item-actions button:hover{background:var(--primary-soft);color:var(--primary)}
@@ -966,10 +983,12 @@ body:not(.v2-view) #v2Panel{display:none!important}
 
 @media(max-width:980px){
   .v2-home-grid{grid-template-columns:minmax(0,1fr)}
+  .v2-home-grid > .v2-card,.v2-home-grid > .v2-home-compact-status{grid-column:1/-1}
   .v2-inbox-layout,.v2-waiting-layout{grid-template-columns:1fr}
   .v2-side-stack{display:grid;grid-template-columns:1fr 1fr}
 }
 @media(max-width:700px){
+  .v2-home-grid .v2-card-head{flex-wrap:wrap;row-gap:4px}.v2-home-grid .v2-card-head p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v2-home-actions{flex-wrap:wrap}.v2-home-inbox.is-single .v2-inbox-summary{flex-wrap:wrap}.v2-home-inbox.is-single .v2-inbox-compact-actions{margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
   body.v2-view .main{padding:14px 12px 18px}
   .v2-pagehead{align-items:flex-start;gap:8px}.v2-pagehead h1{font-size:21px}.v2-page-date{font-size:11px}
   .v2-status{font-size:10.5px}.v2-status-item{padding-left:5px;padding-right:5px}.v2-status-item b{font-size:12.5px}.v2-status i{margin-left:1px;margin-right:1px}
@@ -4243,7 +4262,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2InboxNoticeHTML(message,entryId){
     if(!message)return '';
     var retry=/失败/.test(message)?'<button class="btn-ghost" type="button" data-v2-ai-action="retry" data-v2-ai-entry-id="'+esc(entryId||'')+'">重试</button>':'<button class="btn-ghost" type="button" data-v2-ai-action="settings" data-v2-ai-entry-id="'+esc(entryId||'')+'">去设置</button>';
-    return '<div class="v2-ai-notice"><strong>'+esc(message)+'</strong><div class="v2-ai-actions">'+retry+'<button class="btn-ghost" type="button" data-v2-ai-action="local" data-v2-ai-entry-id="'+esc(entryId||'')+'">使用本地整理</button></div></div>';
+    return '<div class="v2-ai-notice" role="status" aria-live="polite"><strong>'+esc(message)+'</strong><div class="v2-ai-actions">'+retry+'<button class="btn-ghost" type="button" data-v2-ai-action="local" data-v2-ai-entry-id="'+esc(entryId||'')+'">使用本地整理</button></div></div>';
   }
   function v2UseLocalInbox(entryId){
     var entry=v2FindInbox(entryId)||v2InboxPending()[0];
@@ -4463,6 +4482,100 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var p=v2TaskProject(t),d=t.completedAt||t.doneAt;
     return '<div class="v2-done-row"><span class="v2-dot ok"></span><span class="v2-done-time">'+esc(v2TimeText(d)||'—')+'</span><span class="v2-done-title">'+esc(v2TaskTitle(t))+'</span>'+(p?'<span class="v2-chip project v2-done-project">'+esc(p.name)+'</span>':'')+'</div>';
   }
+  function v2WeekSchedule(excludedTaskIds){
+    excludedTaskIds=excludedTaskIds||Object.create(null);
+    var start=weekStart(today0()),startKey=fmt(start),endKey=fmt(addDays(start,6)),items=[];
+    data.todos.forEach(function(t){
+      if(!v2IsOpen(t)||!t.id||excludedTaskIds[t.id])return;
+      var due=v2Due(t);
+      if(due&&due>=startKey&&due<=endKey)items.push({kind:'task',date:due,text:v2TaskTitle(t),task:t});
+      var follow=v2ParseDate(t.followUpAt),followKey=follow?fmt(follow):'';
+      if(v2IsWaiting(t)&&followKey&&followKey>=startKey&&followKey<=endKey&&followKey!==due)items.push({kind:'followup',date:followKey,text:'跟进：'+v2TaskTitle(t),task:t});
+    });
+    for(var i=0;i<7;i++){
+      var day=fmt(addDays(start,i));
+      eventsOn(day).forEach(function(ev){items.push({kind:'event',date:day,text:ev.text,task:null});});
+    }
+    return items.sort(function(a,b){
+      var dateCmp=a.date.localeCompare(b.date);
+      if(dateCmp)return dateCmp;
+      var kindCmp=(a.kind==='event'?1:0)-(b.kind==='event'?1:0);
+      if(kindCmp)return kindCmp;
+      if(a.task&&b.task){var taskCmp=v2TaskSort(a.task,b.task);if(taskCmp)return taskCmp;}
+      return String(a.text||'').localeCompare(String(b.text||''));
+    });
+  }
+  function v2HomeWeekDate(date){
+    var td=fmt(today0());
+    if(date===td)return '今天';
+    if(date===v2Tomorrow())return '明天';
+    return v2DateText(date,true);
+  }
+  function v2WeekScheduleHTML(items){
+    if(!items.length)return '';
+    var h='<article class="v2-card v2-home-week"><div class="v2-card-head"><span class="v2-bar"></span><h2>本周安排</h2><p>任务与日程</p><button class="v2-head-action" type="button" data-v2-nav="calendar">打开日历</button><span class="v2-count">'+items.length+' 项</span></div><div class="v2-week-list">';
+    items.slice(0,6).forEach(function(x){
+      var kindClass=x.kind==='event'?'event':x.kind==='followup'?'followup':'task',kind=x.kind==='event'?'日程':x.kind==='followup'?'跟进':'任务';
+      h+='<div class="v2-week-row"><span class="v2-week-date">'+esc(v2HomeWeekDate(x.date))+'</span><span class="v2-week-kind '+kindClass+'">'+kind+'</span><span class="v2-week-text">'+esc(x.text)+'</span></div>';
+    });
+    if(items.length>6)h+='<button class="v2-card-more" type="button" data-v2-nav="calendar">还有 '+(items.length-6)+' 项 →</button>';
+    return h+'</div></article>';
+  }
+  function v2QuickLinksHTML(){
+    return '<article class="v2-card v2-home-quick"><div class="v2-card-head"><span class="v2-bar"></span><h2>快捷入口</h2><p>常用动作</p></div><div class="v2-quick-links">'
+      +'<button class="v2-quick-link" type="button" data-v2-action="open-capture"><span class="v2-quick-icon" aria-hidden="true">＋</span><span class="v2-quick-label">快速记录</span></button>'
+      +'<button class="v2-quick-link" type="button" data-v2-action="open-new-task"><span class="v2-quick-icon" aria-hidden="true">＋</span><span class="v2-quick-label">新建任务</span></button>'
+      +'<button class="v2-quick-link" type="button" data-v2-nav="inbox"><span class="v2-quick-icon" aria-hidden="true">↗</span><span class="v2-quick-label">打开收件箱</span></button>'
+      +'<button class="v2-quick-link" type="button" data-v2-nav="calendar"><span class="v2-quick-icon" aria-hidden="true">◷</span><span class="v2-quick-label">打开日历</span></button>'
+      +'<button class="v2-quick-link" type="button" data-v2-nav="records"><span class="v2-quick-icon" aria-hidden="true">≡</span><span class="v2-quick-label">工作记录</span></button>'
+      +'</div></article>';
+  }
+  function v2RecentRecords(limit){
+    return data.todos.filter(function(t){return !!t.done&&!!v2ParseDate(t.completedAt||t.doneAt);}).sort(function(a,b){
+      return (v2ParseDate(b.completedAt||b.doneAt)||new Date(0))-(v2ParseDate(a.completedAt||a.doneAt)||new Date(0));
+    }).slice(0,limit||5);
+  }
+  function v2RecentRecordsHTML(records){
+    if(!records.length)return '';
+    var h='<article class="v2-card v2-home-records"><div class="v2-card-head"><span class="v2-bar"></span><h2>最近记录</h2><p>已完成事项</p><button class="v2-head-action" type="button" data-v2-nav="records">查看全部 →</button><span class="v2-count">'+records.length+' 条</span></div><div class="v2-record-mini-list">';
+    records.forEach(function(t){
+      var stamp=t.completedAt||t.doneAt,date=v2DateOnly(stamp)===fmt(today0())?v2TimeText(stamp):v2DateText(stamp),p=v2TaskProject(t);
+      h+='<div class="v2-record-mini-row"><span class="v2-record-mini-date">'+esc(date||'—')+'</span><span class="v2-record-mini-title">'+esc(v2TaskTitle(t))+'</span>'+(p?'<span class="v2-chip project">'+esc(p.name)+'</span>':'')+'</div>';
+    });
+    return h+'</div></article>';
+  }
+  function v2HomeReminderData(){
+    var now=new Date(),horizon=new Date(now.getTime()+7*86400000),center=typeof v2ReminderCenterItems==='function'?v2ReminderCenterItems():{due:[],snoozed:[],upcoming:[]},due=(center.due||[]).slice(),snoozed=(center.snoozed||[]).slice(),upcoming=[],seen=Object.create(null);
+    (center.upcoming||[]).forEach(function(x){
+      var at=v2ParseDate(x.at),key=x.id+'|'+x.kind+'|'+(at?at.toISOString():'');
+      if(!seen[key]){seen[key]=true;upcoming.push(x);}
+    });
+    data.todos.forEach(function(t){
+      if(!v2IsOpen(t))return;
+      var snooze=v2ParseDate(t.snoozedUntil);
+      if(snooze&&snooze>now)return;
+      var keys=Array.isArray(t.notificationKeys)?t.notificationKeys:[];
+      v2ReminderTargets(t).forEach(function(target){
+        var at=v2ParseDate(target.at),key=t.id+'|'+target.kind+'|'+(at?at.toISOString():'');
+        if(!at||at<=now||at>horizon||seen[key]||keys.indexOf(target.key)>=0)return;
+        seen[key]=true;upcoming.push({id:t.id,kind:target.kind,at:at,body:v2ReminderBody(t,target)});
+      });
+    });
+    upcoming.sort(function(a,b){return (v2ParseDate(a.at)||new Date(0))-(v2ParseDate(b.at)||new Date(0));});
+    return {due:due,snoozed:snoozed,upcoming:upcoming.slice(0,8)};
+  }
+  function v2ReminderSummaryHTML(summary){
+    if(!summary)return '';
+    var due=summary.due||[],snoozed=summary.snoozed||[],upcoming=summary.upcoming||[],total=due.length+snoozed.length+upcoming.length;
+    if(!total)return '';
+    var h='<article class="v2-card v2-home-reminders"><div class="v2-card-head"><span class="v2-bar"></span><h2>提醒摘要</h2><p>未来 7 天</p><button class="v2-head-action" type="button" data-v2-smart-target="reminders">打开提醒中心</button><span class="v2-count">'+total+' 项</span></div><div class="v2-reminder-summary-stats"><div class="v2-reminder-stat due"><b>'+due.length+'</b><span>已到时间</span></div><div class="v2-reminder-stat snooze"><b>'+snoozed.length+'</b><span>已稍后</span></div><div class="v2-reminder-stat"><b>'+upcoming.length+'</b><span>未来 7 天</span></div></div>';
+    var rows=[];
+    due.forEach(function(x){var t=todoById(x.id);if(t)rows.push({cls:'due',title:x.body||v2TaskTitle(t),meta:'已到时间',at:x.createdAt});});
+    snoozed.forEach(function(x){var t=todoById(x.id);if(t)rows.push({cls:'snooze',title:v2TaskTitle(t),meta:'已稍后至 '+v2DateTimeText(x.at),at:x.at});});
+    upcoming.forEach(function(x){var t=todoById(x.id);if(t)rows.push({cls:'',title:x.body||v2TaskTitle(t),meta:(x.kind==='followup'?'待跟进':x.kind==='due'?'截止':'提醒')+' · '+v2DateTimeText(x.at),at:x.at});});
+    if(rows.length)h+='<div class="v2-reminder-mini-list">'+rows.slice(0,4).map(function(row){return '<div class="v2-reminder-mini-row"><span class="v2-reminder-mini-dot '+row.cls+'"></span><div class="v2-reminder-mini-main"><span class="v2-reminder-mini-title">'+esc(row.title)+'</span><span class="v2-reminder-mini-meta">'+esc(row.meta||'')+'</span></div></div>';}).join('')+'</div>';
+    return h+'</article>';
+  }
   function v2Header(title,subtitle){$('v2Title').textContent=title;$('v2Subtitle').textContent=subtitle;$('v2Date').textContent=v2DateText(new Date(),true);}
   function v2RenderStatus(){
     var today=v2TodayTasks().length,waiting=v2WaitingTasks().length,done=v2DoneToday().length,now=new Date(),rem=0;
@@ -4516,19 +4629,25 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var overdue=data.todos.filter(function(t){return v2IsOpen(t)&&v2Due(t)&&v2Due(t)<todayKey&&!focusIds[t.id];});
     var dueToday=data.todos.filter(function(t){return v2IsOpen(t)&&!v2IsWaiting(t)&&v2Due(t)===todayKey&&!focusIds[t.id];});
     var waitingDue=data.todos.filter(function(t){var d=v2ParseDate(t.followUpAt);return v2IsWaiting(t)&&d&&d<=now;});
-    var staleInbox=v2InboxPending().filter(function(x){return olderThan(x.updatedAt||x.createdAt,2);});
+    var waitingNoFollow=data.todos.filter(function(t){return v2IsWaiting(t)&&!v2ParseDate(t.followUpAt);});
+    var pendingInbox=v2InboxPending();
+    var staleInbox=pendingInbox.filter(function(x){return olderThan(x.updatedAt||x.createdAt,2);});
     var staleTbd=data.todos.filter(function(t){return v2IsOpen(t)&&v2DueMode(t)==='tbd'&&olderThan(t.updatedAt||t.createdAt,7);});
+    var unplanned=data.todos.filter(function(t){return v2IsOpen(t)&&v2DueMode(t)==='none'&&!v2IsWaiting(t)&&!focusIds[t.id];});
     if(overdue.length)hints.push({icon:'⚠',text:'还有 '+overdue.length+' 项逾期未排进今天重点',target:'tasks',tab:'all',tone:'danger'});
     if(waitingDue.length)hints.push({icon:'⏳',text:'有 '+waitingDue.length+' 项等回复已到跟进时间',target:'tasks',tab:'waiting',tone:'warn'});
     if(dueToday.length)hints.push({icon:'◷',text:'今天还有 '+dueToday.length+' 项截止项未排进重点',target:'tasks',tab:'today',tone:'warn'});
     if(staleInbox.length)hints.push({icon:'📥',text:'收件箱有 '+staleInbox.length+' 条内容超过 2 天未整理',target:'inbox',tone:'primary'});
     if(staleTbd.length)hints.push({icon:'⌛',text:'有 '+staleTbd.length+' 项时间待定超过 7 天',target:'tasks',tab:'tbd',tone:'warn'});
+    if(waitingNoFollow.length&&hints.length<4)hints.push({icon:'↗',text:'有 '+waitingNoFollow.length+' 项等回复尚未设置跟进时间',target:'tasks',tab:'waiting',tone:'warn'});
+    if(pendingInbox.length&&!staleInbox.length&&hints.length<4)hints.push({icon:'📥',text:'收件箱有 '+pendingInbox.length+' 条内容待整理',target:'inbox',tone:'primary'});
+    if(unplanned.length&&hints.length<4)hints.push({icon:'＋',text:'有 '+unplanned.length+' 项任务尚未安排时间',target:'tasks',tab:'all',tone:'primary'});
     return hints.slice(0,4);
   }
   function v2SmartHintsHTML(){
     var hints=v2SmartHints();
     if(!hints.length)return '';
-    return '<div class="v2-home-risk" role="status" aria-label="智能提示"><span class="v2-home-risk-label">智能提示</span>'+hints.map(function(x,i){return (i?'<span class="v2-home-risk-sep" aria-hidden="true">·</span>':'')+'<button class="'+esc(x.tone||'')+'" type="button" data-v2-smart-target="'+esc(x.target)+'"'+(x.tab?' data-v2-smart-tab="'+esc(x.tab)+'"':'')+'><span class="v2-hint-glyph" aria-hidden="true">'+esc(x.icon||'•')+'</span>'+esc(x.text)+'</button>';}).join('')+'</div>';
+    return '<article class="v2-card v2-home-smart"><div class="v2-card-head"><span class="v2-bar"></span><h2>智能建议</h2><p>本地规则 · 基于已记录数据</p><span class="v2-count">'+hints.length+' 条</span></div><div class="v2-smart-list">'+hints.map(function(x){return '<button class="v2-smart-row '+esc(x.tone||'')+'" type="button" data-v2-smart-target="'+esc(x.target)+'"'+(x.tab?' data-v2-smart-tab="'+esc(x.tab)+'"':'')+'><span class="v2-smart-icon" aria-hidden="true">'+esc(x.icon||'•')+'</span><span class="v2-smart-text">'+esc(x.text)+'</span><span class="v2-smart-open">查看 →</span></button>';}).join('')+'</div></article>';
   }
   function openAIAssistant(){
     var dr=$('aiDrawer'),mask=$('aiDrawerMask');if(!dr||!mask)return;
@@ -4603,10 +4722,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function renderV2Home(){
     v2Header('今天','先处理最重要的事，再整理其余输入。');
     var today=v2TodayTasks(),waiting=v2WaitingTasks(),done=v2DoneToday(),focus=v2HomeFocusTasks(),focusIds=v2HomeFocusIds(focus),allUpcoming=v2Upcoming(focusIds),upcoming=allUpcoming.slice(0,5),pending=v2InboxPending();
+    var weekItems=v2WeekSchedule(focusIds);if(!weekItems.length)weekItems=v2WeekSchedule();
+    var recentRecords=v2RecentRecords(5),reminderData=v2HomeReminderData();
     var inboxStateClass=pending.length===0?' is-empty':pending.length===1?' is-single':'';
     var homeInboxState=v2InboxAIState.showHome?v2InboxAIState:null,homeInboxEntryId=homeInboxState&&homeInboxState.entryId,homeInboxBusy=!!(homeInboxState&&homeInboxState.status==='busy');
     var inboxActions='<button class="btn-primary" type="button" data-v2-action="inbox-ai"'+(homeInboxBusy||v2AiBusy?' disabled':'')+'>'+(homeInboxBusy?'正在整理…':'AI整理')+'</button><button class="btn-ghost" type="button" data-v2-nav="inbox">打开收件箱</button>';
-    var h=v2SmartHintsHTML()+'<div class="v2-home-grid">';
+    var h='<div class="v2-home-grid">';
     h+='<article id="v2HomeFocus" class="v2-card primary v2-home-focus"><div class="v2-card-head"><span class="v2-bar"></span><h2>今天重点</h2><p>最多先看 5 项</p><button class="v2-head-action" type="button" data-v2-ai-action="planToday">✨ 帮我安排今天</button><span class="v2-count">'+today.length+' 项</span></div><div class="v2-focus-list">';
     if(!focus.length)h+='<div class="v2-empty compact"><strong>今天还没有安排重点</strong>从收件箱挑一件，或者新建一个明确任务。</div>';else focus.forEach(function(t){h+=v2TaskRowHTML(t,{home:true,reorder:true});});
     h+='</div>'+(v2HomeAI.plan?'<div class="v2-home-ai-result">'+v2PlanHTML()+'</div>':'')+'<div class="v2-home-actions v2-focus-actions"><button class="btn-ghost" type="button" data-v2-action="open-new-task">新建任务</button><button class="btn-ghost" type="button" data-v2-nav="inbox">从收件箱安排</button><button class="v2-link" type="button" data-v2-nav="tasks" data-v2-tab="today">查看全部</button></div></article>';
@@ -4618,12 +4739,24 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     h+='<article id="v2HomeUpcoming" class="v2-card v2-home-upcoming'+(!upcoming.length?' is-empty':'')+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>近期节点</h2><p>截止与日程</p><button class="v2-head-action" type="button" data-v2-nav="calendar">'+(allUpcoming.length>upcoming.length?'查看全部 →':'打开日历')+'</button></div><div class="v2-upcoming-list">';
     if(!upcoming.length)h+='<div class="v2-empty compact">近期没有逾期、排期节点或时间待定事项。</div>';else upcoming.forEach(function(x){var tbd=x.kind==='tbd',group=x.group||'',status=tbd?'时间待定':group==='逾期'?'逾期':group==='今天'?'今天':group==='明天'?'明天':group==='本周'?'本周':'近期',statusClass=tbd?'tbd':group==='逾期'?'overdue':group==='今天'?'today':group==='明天'?'tomorrow':'',dateLabel=tbd?'—':v2DateText(x.date),relative=tbd?'待安排':v2RelativeDateLabel(x.date);h+='<div class="v2-upcoming-row'+(tbd?' tbd':'')+'"'+(x.task&&x.task.id?' data-task-id="'+esc(x.task.id)+'"':'')+'><span class="v2-upcoming-status '+statusClass+'">'+esc(status)+'</span><span class="v2-upcoming-date">'+esc(dateLabel)+'</span><div class="v2-mini-main"><div class="v2-mini-title">'+esc(x.text)+'</div></div><span class="v2-mini-time'+(group==='逾期'?' soon':'')+'">'+esc(relative)+'</span></div>';});
     h+='</div></article>';
-    h+='<article id="v2HomeWaiting" class="v2-card v2-home-waiting'+(!waiting.length?' is-empty':'')+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>等回复 / 待跟进</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="waiting">全部 '+waiting.length+'</button></div><div class="v2-wait-list">';
-    if(!waiting.length)h+='<div class="v2-empty compact">目前没有等待回复的事项。</div>';else waiting.slice(0,3).forEach(function(t){h+='<div class="v2-wait-row"><span class="v2-dot"></span><div class="v2-mini-main"><div class="v2-mini-title">'+esc(v2TaskTitle(t))+'</div><div class="v2-mini-sub">等：'+esc(t.waitingFor||'相关方')+'</div></div><span class="v2-mini-time'+(t.followUpAt&&v2ParseDate(t.followUpAt)<=new Date()?' soon':'')+'">'+(t.followUpAt?esc(v2DateTimeText(t.followUpAt)):'待安排')+'</span></div>';});
-    h+='</div>'+(waiting.length>3?'<button class="v2-card-more" type="button" data-v2-nav="tasks" data-v2-tab="waiting">查看全部待跟进 →</button>':'')+'</article>';
-    h+='<article id="v2HomeDone" class="v2-card v2-home-done'+(!done.length?' is-empty':'')+'"><div class="v2-card-head"><span class="v2-bar"></span><h2>今天已完成</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button><span class="v2-count">'+done.length+' 项</span></div><div class="v2-done-list">';
-    if(!done.length)h+='<div class="v2-empty compact">完成任务后，会自动留下时间与项目记录。</div>';else done.slice(0,5).forEach(function(t){h+=v2DoneRow(t);});
-    h+='</div>'+(done.length>5?'<button class="v2-card-more" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button>':'')+'</article></div>';
+    var waitingTag=waiting.length?'article':'div';
+    h+='<'+waitingTag+' id="v2HomeWaiting" class="'+(waiting.length?'v2-card':'v2-home-compact-status')+' v2-home-waiting"'+(waiting.length?'':' role="status"')+'>';
+    if(waiting.length){
+      h+='<div class="v2-card-head"><span class="v2-bar"></span><h2>等回复 / 待跟进</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="waiting">全部 '+waiting.length+'</button></div><div class="v2-wait-list">';
+      waiting.slice(0,3).forEach(function(t){h+='<div class="v2-wait-row"><span class="v2-dot"></span><div class="v2-mini-main"><div class="v2-mini-title">'+esc(v2TaskTitle(t))+'</div><div class="v2-mini-sub">等：'+esc(t.waitingFor||'相关方')+'</div></div><span class="v2-mini-time'+(t.followUpAt&&v2ParseDate(t.followUpAt)<=new Date()?' soon':'')+'">'+(t.followUpAt?esc(v2DateTimeText(t.followUpAt)):'待安排')+'</span></div>';});
+      h+='</div>'+(waiting.length>3?'<button class="v2-card-more" type="button" data-v2-nav="tasks" data-v2-tab="waiting">查看全部待跟进 →</button>':'');
+    }else h+='<span class="v2-compact-icon" aria-hidden="true">✓</span><span class="v2-compact-copy"><strong>待回复 / 待跟进 · 0 项</strong><span>当前没有需要跟进的事项</span></span><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="waiting">查看</button>';
+    h+='</'+waitingTag+'>';
+    var doneTag=done.length?'article':'div',doneClass=done.length?(done.length<=3?'v2-card v2-home-done is-compact':'v2-card v2-home-done is-rich'):'v2-home-compact-status v2-home-done is-compact';
+    h+='<'+doneTag+' id="v2HomeDone" class="'+doneClass+'"'+(done.length?'':' role="status"')+'>';
+    if(done.length){
+      h+='<div class="v2-card-head"><span class="v2-bar"></span><h2>今天已完成</h2><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button><span class="v2-count">'+done.length+' 项</span></div><div class="v2-done-list">';
+      done.slice(0,5).forEach(function(t){h+=v2DoneRow(t);});
+      h+='</div>'+(done.length>5?'<button class="v2-card-more" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看全部 →</button>':'');
+    }else h+='<span class="v2-compact-icon" aria-hidden="true">✓</span><span class="v2-compact-copy"><strong>今天已完成 · 0 项</strong><span>完成任务后会自动留下时间与项目记录</span></span><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看</button>';
+    h+='</'+doneTag+'>';
+    h+=v2WeekScheduleHTML(weekItems)+v2QuickLinksHTML()+v2RecentRecordsHTML(recentRecords)+v2ReminderSummaryHTML(reminderData)+v2SmartHintsHTML();
+    h+='</div>';
     $('v2Content').innerHTML=h;
   }
 
