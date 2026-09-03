@@ -4392,7 +4392,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(v2InboxSection==='processed'){if(!active||!v2InboxProcessedKind(active))active=processed[0]||null;}else if(!active||v2InboxProcessedKind(active))active=pending[0]||null;
     v2InboxActiveId=active?active.id:null;
     var activeProcessed=!!(active&&v2InboxProcessedKind(active));
-    var canOrganize=!!(active&&!activeProcessed),h='<div class="v2-inbox-layout"><article class="v2-page-card v2-capture-card">'
+    var canOrganize=!activeProcessed,h='<div class="v2-inbox-layout"><article class="v2-page-card v2-capture-card">'
       +'<div class="v2-eyebrow">INBOX · CAPTURE</div><h2>把事情先放进来</h2><p>微信消息、会议记录、领导交办或一大段复制内容，都可以先原样保存。选择 AI 整理或本地整理后，再编辑候选项。</p>'
       +'<textarea class="v2-textarea" id="v2InboxText" placeholder="把消息、会议内容、临时交办直接粘贴到这里……"'+(canOrganize?'':' readonly')+'>'+(active?esc(active.rawText||''):'')+'</textarea>'
       +'<div class="v2-capture-foot"><span>原文会随记录保留，可追溯来源</span><div class="v2-capture-actions"><button class="btn-ghost" id="v2InboxAnalyze" type="button"'+(canOrganize?'':' disabled')+'>本地整理</button><button class="btn-primary" id="v2InboxAI" type="button"'+(canOrganize&&!v2AiBusy?'':' disabled')+'>'+(v2InboxAIState.status==='busy'?'正在整理…':'AI整理')+'</button></div></div>'
@@ -5197,7 +5197,19 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(e.target.id==='v2RecordProject'){v2RecordProject=e.target.value;v2Render();return;}
     if(e.target.id==='v2RecordCategory'){v2RecordCategory=e.target.value;v2Render();return;}
   });
-  $('v2Content').addEventListener('input',function(e){if(e.target.id==='v2TaskSearch'){v2TaskFilters.keyword=e.target.value;renderV2TaskPage();}});
+  $('v2Content').addEventListener('input',function(e){
+    if(e.target.id==='v2InboxText'){
+      var text=e.target.value,entry=v2FindInbox(v2InboxActiveId);
+      if(entry&&v2InboxProcessedKind(entry))return;
+      if(!entry){
+        if(!text.trim())return;
+        entry={id:genId('i'),rawText:text,sourceType:'paste',organizeEngine:'local',status:'new',createdAt:v2Now(),updatedAt:v2Now(),candidates:[]};
+        data.inbox.unshift(entry);v2InboxActiveId=entry.id;v2InboxSection='pending';
+      }else{entry.rawText=text;entry.updatedAt=v2Now();}
+      save();return;
+    }
+    if(e.target.id==='v2TaskSearch'){v2TaskFilters.keyword=e.target.value;renderV2TaskPage();}
+  });
   var v2BoardDragId=null;
   $('v2Content').addEventListener('keydown',function(e){
     if(e.key!=='Enter')return;
