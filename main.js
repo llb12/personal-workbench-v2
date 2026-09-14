@@ -158,28 +158,76 @@ const EMPTY = {
   theme: 'light'
 };
 
-function readData() {
+// 只有成功完成一次数据加载（包括确认文件不存在）后，才允许写入。
+// 读取失败时保持保护态，避免渲染进程把空的初始化数据覆盖到原文件。
+let loadState = 'unknown';
+
+function backupBrokenData(file) {
   try {
-    const f = dataFile();
-    if (!fs.existsSync(f)) return null;
-    const raw = fs.readFileSync(f, 'utf8');
-    if (!raw || !raw.trim()) return null;
-    const obj = JSON.parse(raw);
-    if (!obj || typeof obj !== 'object') return null;
-    return obj;
-  } catch (e) {
-    // JSON 损坏 -> 兜底，不崩溃；同时把损坏文件另存备份
-    try {
-      const f = dataFile();
-      if (fs.existsSync(f)) {
-        fs.copyFileSync(f, f + '.broken-' + Date.now() + '.bak');
-      }
-    } catch (_) { /* ignore */ }
+    if (!fs.existsSync(file)) return null;
+    const backupPath = file + '.broken-' + Date.now() + '.bak';
+    fs.copyFileSync(file, backupPath);
+    return backupPath;
+  } catch (_) {
     return null;
   }
 }
 
+function loadFailure(code, message, file) {
+  loadState = 'failed';
+  return {
+    __workbenchLoadError: true,
+    code,
+    error: message,
+    backupPath: file ? backupBrokenData(file) : null
+  };
+}
+
+function readData() {
+  let f;
+  loadState = 'loading';
+  try {
+    f = dataFile();
+    fs.statSync(f);
+  } catch (e) {
+    if (e && e.code === 'ENOENT') {
+      loadState = 'ready';
+      return null;
+    }
+    return loadFailure('DATA_READ_FAILED', '数据文件读取失败，已保护原文件；请重试加载或使用备份恢复。', f);
+  }
+
+  let raw;
+  try {
+    raw = fs.readFileSync(f, 'utf8');
+  } catch (_) {
+    return loadFailure('DATA_READ_FAILED', '数据文件读取失败，已保护原文件；请重试加载或使用备份恢复。', f);
+  }
+  if (!raw || !raw.trim()) {
+    return loadFailure('DATA_CORRUPT', '数据文件为空或已损坏，已保护原文件；请重试加载或使用备份恢复。', f);
+  }
+
+  let obj;
+  try {
+    obj = JSON.parse(raw);
+  } catch (_) {
+    return loadFailure('DATA_CORRUPT', '数据文件不是有效的 JSON，已保护原文件；请重试加载或使用备份恢复。', f);
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return loadFailure('DATA_CORRUPT', '数据文件根结构无效，已保护原文件；请重试加载或使用备份恢复。', f);
+  }
+  loadState = 'ready';
+  return obj;
+}
+
 function writeData(data) {
+  if (loadState !== 'ready') {
+    return {
+      ok: false,
+      code: 'DATA_WRITE_BLOCKED',
+      error: '数据加载失败，已保护原文件；请先重试加载或恢复可读取的数据。'
+    };
+  }
   try {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       return { ok: false, error: '保存失败：数据结构无效' };
@@ -319,7 +367,7 @@ function validateImportData(obj) {
       if (t.priority !== undefined && !['high', 'mid', 'low'].includes(t.priority)) {
         return 'todos[' + i + '].priority 无效';
       }
-      if (t.status !== undefined && !['todo', 'doing', 'waiting', 'done', 'archived', 'inbox'].includes(t.status)) {
+      if (t.status !== undefined && !['todo', 'doing', 'waiting', 'followup', 'done', 'archived', 'inbox'].includes(t.status)) {
         return 'todos[' + i + '].status 无效';
       }
       if (!isDateOrEmpty(t.due)) return 'todos[' + i + '].due 日期格式无效';
@@ -400,6 +448,12 @@ function validateImportData(obj) {
 }
 
 ipcMain.handle('import-data', async () => {
+  if (loadState !== 'ready') {
+    return {
+      code: 'DATA_WRITE_BLOCKED',
+      error: '当前数据无法读取，已保护原文件；请先重试加载或恢复可读取的数据。'
+    };
+  }
   const res = await dialog.showOpenDialog(win, {
     title: '导入备份',
     properties: ['openFile'],
