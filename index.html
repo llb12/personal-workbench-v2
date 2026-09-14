@@ -5032,6 +5032,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     else if(v2RecordRange==='week')start=fmt(weekStart(td));
     else if(v2RecordRange==='month')start=fmt(new Date(td.getFullYear(),td.getMonth(),1));
     else if(v2RecordRange==='custom'){start=v2RecordCustomStart||'';end=v2RecordCustomEnd||'';}
+  var v2RecordKeyword='';
     if(start&&end&&start>end){var swap=start;start=end;end=swap;}
     return {start:start,end:end};
   }
@@ -5042,6 +5043,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(bounds.start&&d<bounds.start)return false;if(bounds.end&&d>bounds.end)return false;
     if(v2RecordProject&&v2TaskProjectId(t)!==v2RecordProject)return false;
     if(v2RecordCategory&&(t.category||'manual')!==v2RecordCategory)return false;
+    var p=v2TaskProject(t),keyword=String(v2RecordKeyword||'').trim().toLowerCase();
+    if(keyword&&[v2TaskTitle(t),p?p.name:'',v2SourceLabel(t.sourceType),t.sourceType,t.completionNote,t.outcome].join(' ').toLowerCase().indexOf(keyword)<0)return false;
     return true;
   }
   function v2RecordRangeLabel(range){return {today:'今天',week:'本周',month:'本月',custom:'自定义日期',all:'全部日期'}[range||v2RecordRange]||'工作记录';}
@@ -5050,11 +5053,11 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     v2Header('工作记录','这里记录事实：按任务的 completedAt 回答今天、本周、本月完成了什么。');
     var list=v2RecordFiltered(),h='<div class="v2-page-card"><div class="v2-record-ranges" role="tablist" aria-label="工作记录范围">';
     ['today','week','month','custom'].forEach(function(range){h+='<button class="v2-record-range'+(v2RecordRange===range?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordRange===range?'true':'false')+'" data-v2-record-range="'+range+'">'+v2RecordRangeLabel(range)+'</button>';});
-    h+='</div><div class="v2-record-custom"'+(v2RecordRange==='custom'?'':' hidden')+'><span>日期</span><input class="inp" type="date" id="v2RecordStart" value="'+esc(v2RecordCustomStart)+'"><span>至</span><input class="inp" type="date" id="v2RecordEnd" value="'+esc(v2RecordCustomEnd)+'"></div><div class="v2-record-toolbar"><select class="inp" id="v2RecordProject">'+v2ProjectOptions(v2RecordProject).replace('无项目','全部项目')+'</select><select class="inp" id="v2RecordCategory">'+v2RecordCategories()+'</select><button class="v2-toolbar-btn" type="button" data-v2-record-action="clear-date">查看全部日期</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeDay">AI 日总结</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeWeek">AI 周总结</button><button class="v2-toolbar-btn v2-record-export" type="button" data-v2-record-action="copy">复制当前记录</button><span class="v2-filter-note">'+v2RecordRangeLabel()+' · '+list.length+' 项</span></div><div class="v2-record-list">';
+    h+='</div><div class="v2-record-custom"'+(v2RecordRange==='custom'?'':' hidden')+'><span>日期</span><input class="inp" type="date" id="v2RecordStart" value="'+esc(v2RecordCustomStart)+'"><span>至</span><input class="inp" type="date" id="v2RecordEnd" value="'+esc(v2RecordCustomEnd)+'"></div><div class="v2-record-toolbar"><input class="inp" type="search" id="v2RecordKeyword" placeholder="搜索工作记录" aria-label="搜索工作记录" value="'+esc(v2RecordKeyword)+'"><select class="inp" id="v2RecordProject">'+v2ProjectOptions(v2RecordProject).replace('无项目','全部项目')+'</select><select class="inp" id="v2RecordCategory">'+v2RecordCategories()+'</select><button class="v2-toolbar-btn" type="button" data-v2-record-action="clear-date">查看全部日期</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeDay">AI 日总结</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeWeek">AI 周总结</button><button class="v2-toolbar-btn v2-record-export" type="button" data-v2-record-action="copy">复制当前记录</button><span class="v2-filter-note">'+v2RecordRangeLabel()+' · '+list.length+' 项</span></div><div class="v2-record-list">';
     if(!list.length)h+='<div class="v2-empty"><strong>'+esc(v2RecordRangeLabel())+'暂无完成事项</strong>完成任务后，这里会自动生成工作记录。</div>';
     else{
       var groups={};list.forEach(function(t){var d=v2DateOnly(t.completedAt||t.doneAt)||'更早';(groups[d]=groups[d]||[]).push(t);});
-      Object.keys(groups).sort().reverse().forEach(function(d){h+='<section class="v2-record-day"><div class="v2-record-day-head"><strong>'+esc(d==='更早'?d:v2DateText(d,true))+'</strong><span>'+groups[d].length+' 项</span></div>';groups[d].forEach(function(t){var p=v2TaskProject(t),stamp=t.completedAt||t.doneAt;h+='<div class="v2-record-line"><span class="v2-record-time">'+esc(v2TimeText(stamp)||'—')+'</span><div class="v2-record-line-main"><div class="v2-record-line-title">'+esc(v2TaskTitle(t))+'</div><div class="v2-record-line-meta">'+(p?'<span class="v2-chip project">'+esc(p.name)+'</span>':'')+'<span>'+esc(v2CategoryLabel(t.category||'manual'))+'</span><span>来源：'+esc(v2SourceLabel(t.sourceType))+'</span></div></div></div>';});h+='</section>';});
+      Object.keys(groups).sort().reverse().forEach(function(d){h+='<section class="v2-record-day"><div class="v2-record-day-head"><strong>'+esc(d==='更早'?d:v2DateText(d,true))+'</strong><span>'+groups[d].length+' 项</span></div>';groups[d].forEach(function(t){var p=v2TaskProject(t),stamp=t.completedAt||t.doneAt;h+='<div class="v2-record-line"><span class="v2-record-time">'+esc(v2TimeText(stamp)||'—')+'</span><div class="v2-record-line-main"><div class="v2-record-line-title">'+esc(v2TaskTitle(t))+'</div><div class="v2-record-line-meta">'+(p?'<span class="v2-chip project">'+esc(p.name)+'</span>':'')+'<span>'+esc(v2CategoryLabel(t.category||'manual'))+'</span><span>来源：'+esc(v2SourceLabel(t.sourceType))+'</span></div>'+(t.completionNote?'<div>完成说明：'+esc(t.completionNote)+'</div>':'')+(t.outcome?'<div>成果/结果：'+esc(t.outcome)+'</div>':'')+'<button class="v2-toolbar-btn" type="button" aria-label="打开任务" data-v2-record-open="'+esc(t.id)+'">打开任务</button></div></div>';});h+='</section>';});
     }
     h+='</div>'+(v2RecordAI.day||v2RecordAI.week?'<div class="v2-record-ai-result">'+(v2RecordAI.day?v2AIResultHTML(v2RecordAI.day):'')+(v2RecordAI.week?v2AIResultHTML(v2RecordAI.week):'')+'</div>':'')+'</div>';$('v2Content').innerHTML=h;
   }
@@ -5383,6 +5386,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var taskTabBtn=e.target.closest('[data-v2-task-tab]');if(taskTabBtn){v2TaskTab=taskTabBtn.getAttribute('data-v2-task-tab');v2Render();return;}
     var taskViewBtn=e.target.closest('[data-v2-task-view]');if(taskViewBtn){v2TaskView=taskViewBtn.getAttribute('data-v2-task-view')==='board'?'board':'list';v2Render();return;}
     var inboxSectionBtn=e.target.closest('[data-v2-inbox-section]');if(inboxSectionBtn){v2InboxSection=inboxSectionBtn.getAttribute('data-v2-inbox-section')==='processed'?'processed':'pending';v2Render();return;}
+    var recordOpen=e.target.closest('[data-v2-record-open]');if(recordOpen){v2OpenTaskModal(recordOpen.getAttribute('data-v2-record-open'),false);return;}
     var recordRangeBtn=e.target.closest('[data-v2-record-range]');if(recordRangeBtn){v2RecordRange=recordRangeBtn.getAttribute('data-v2-record-range');v2Render();return;}
     var sourceBtn=e.target.closest('[data-v2-ai-source-id]');if(sourceBtn){v2OpenAISource(sourceBtn.getAttribute('data-v2-ai-source-id'),sourceBtn.getAttribute('data-v2-ai-source-type'));return;}
     var smart=e.target.closest('[data-v2-smart-target]');if(smart){var smartTarget=smart.getAttribute('data-v2-smart-target'),smartTab=smart.getAttribute('data-v2-smart-tab');if(smartTarget==='reminders'){v2ReminderCenterOpen=true;renderV2ReminderCenter();}else v2Navigate(smartTarget,{tab:smartTab});e.stopPropagation();return;}
@@ -5427,6 +5431,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
       }else{entry.rawText=text;entry.updatedAt=v2Now();}
       save();return;
     }
+    if(e.target.id==='v2RecordKeyword'){v2RecordKeyword=e.target.value;if(e.isComposing)return;v2Render();var input=$('v2RecordKeyword');if(input){input.focus();if(input.setSelectionRange)input.setSelectionRange(input.value.length,input.value.length);}return;}
     if(e.target.id==='v2TaskSearch'){
       v2TaskFilters.keyword=e.target.value;
       if(e.isComposing||v2TaskSearchComposing)return;
