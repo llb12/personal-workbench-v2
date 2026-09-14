@@ -4095,7 +4095,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   var v2AIDrawerReturnFocus=null,v2MoreOpen=false,v2ReminderCenterOpen=false;
   var V2_RESERVED_INTERFACES=Object.freeze({weekView:'reserved',monthView:'reserved',workload:'reserved',trends:'reserved',recurringTasks:'reserved'});
   window.v2ReservedInterfaces=V2_RESERVED_INTERFACES;
-  var v2ReminderQueue=[],v2RecordRange='today',v2RecordCustomStart=fmt(today0()),v2RecordCustomEnd=fmt(today0()),v2RecordDate=fmt(today0()),v2RecordProject='',v2RecordCategory='';
+  var v2ReminderQueue=[],v2RecordsTab='records',v2RecordRange='today',v2RecordCustomStart=fmt(today0()),v2RecordCustomEnd=fmt(today0()),v2RecordDate=fmt(today0()),v2RecordProject='',v2RecordCategory='';
   var v2TaskFilters={keyword:'',priority:'',status:''},v2TaskSearchComposing=false;
 
   function v2Now(){return new Date().toISOString();}
@@ -5051,9 +5051,16 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function v2RecordRangeLabel(range){return {today:'今天',week:'本周',month:'本月',custom:'自定义日期',all:'全部日期'}[range||v2RecordRange]||'工作记录';}
   function v2RecordFiltered(){return data.todos.filter(v2RecordMatches).sort(function(a,b){return (v2ParseDate(b.completedAt||b.doneAt)||new Date(0))-(v2ParseDate(a.completedAt||a.doneAt)||new Date(0));});}
+  function v2RecordsTabsHTML(){
+    return '<div class="v2-task-tabs" role="tablist" aria-label="工作记录页面"><button class="v2-task-tab'+(v2RecordsTab==='records'?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordsTab==='records'?'true':'false')+'" data-v2-record-tab="records">记录</button><button class="v2-task-tab'+(v2RecordsTab==='review'?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordsTab==='review'?'true':'false')+'" data-v2-record-tab="review">复盘</button></div>';
+  }
   function renderV2Records(){
+    if(v2RecordsTab==='review'){renderV2Review(true);return;}
+    renderV2RecordsContent();
+  }
+  function renderV2RecordsContent(){
     v2Header('工作记录','这里记录事实：按任务的 completedAt 回答今天、本周、本月完成了什么。');
-    var list=v2RecordFiltered(),h='<div class="v2-page-card"><div class="v2-record-ranges" role="tablist" aria-label="工作记录范围">';
+    var list=v2RecordFiltered(),h='<div class="v2-page-card">'+v2RecordsTabsHTML()+'<div class="v2-record-ranges" role="tablist" aria-label="工作记录范围">';
     ['today','week','month','custom'].forEach(function(range){h+='<button class="v2-record-range'+(v2RecordRange===range?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordRange===range?'true':'false')+'" data-v2-record-range="'+range+'">'+v2RecordRangeLabel(range)+'</button>';});
     h+='</div><div class="v2-record-custom"'+(v2RecordRange==='custom'?'':' hidden')+'><span>日期</span><input class="inp" type="date" id="v2RecordStart" value="'+esc(v2RecordCustomStart)+'"><span>至</span><input class="inp" type="date" id="v2RecordEnd" value="'+esc(v2RecordCustomEnd)+'"></div><div class="v2-record-toolbar"><input class="inp" type="search" id="v2RecordKeyword" placeholder="搜索工作记录" aria-label="搜索工作记录" value="'+esc(v2RecordKeyword)+'"><select class="inp" id="v2RecordProject">'+v2ProjectOptions(v2RecordProject).replace('无项目','全部项目')+'</select><select class="inp" id="v2RecordCategory">'+v2RecordCategories()+'</select><button class="v2-toolbar-btn" type="button" data-v2-record-action="clear-date">查看全部日期</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeDay">AI 日总结</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeWeek">AI 周总结</button><button class="v2-toolbar-btn v2-record-export" type="button" data-v2-record-action="copy">复制当前记录</button><span class="v2-filter-note">'+v2RecordRangeLabel()+' · '+list.length+' 项</span></div><div class="v2-record-list">';
     if(!list.length)h+='<div class="v2-empty"><strong>'+esc(v2RecordRangeLabel())+'暂无完成事项</strong>完成任务后，这里会自动生成工作记录。</div>';
@@ -5083,8 +5090,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var action=kind==='month'?'summarizeMonth':'summarizeWeek';v2ReviewAI[kind]={engine:'busy',message:'正在生成'+(kind==='month'?'月报':'周报')+'…'};v2Render();
     v2AIInvoke(action,{},function(result){v2ReviewAI[kind]=result;v2Render();});
   }
-  function renderV2Review(){
-    var review=v2ReviewData();v2Header('复盘','工作记录是事实，复盘基于记录与任务状态做总结和分析。');
+  function renderV2Review(embedded){
+    var review=v2ReviewData();if(embedded)v2Header('工作记录','复盘基于已保存的工作记录与任务状态做总结和分析。');else v2Header('复盘','工作记录是事实，复盘基于记录与任务状态做总结和分析。');
     var doneHTML=v2ReviewRows(review.doneWeek,'本周还没有完成记录',function(t){return '<li>'+esc(v2TaskTitle(t))+' · '+esc(v2DateTimeText(t.completedAt||t.doneAt))+'</li>';});
     var openHTML=v2ReviewRows(review.open,'当前没有未完成事项',function(t){return '<li>'+esc(v2TaskTitle(t))+(v2DueChip(t)?' '+v2DueChip(t):'')+'</li>';});
     var overHTML=v2ReviewRows(review.overdue,'当前没有逾期事项',function(t){return '<li>'+esc(v2TaskTitle(t))+' · '+esc(v2DateText(v2Due(t),true))+'</li>';});
@@ -5093,7 +5100,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var h='<div class="v2-review-layout"><div class="v2-review-stack"><article class="v2-page-card v2-review-section"><div class="v2-review-kpis"><div class="v2-review-kpi"><b>'+review.doneWeek.length+'</b><span>本周重点完成</span></div><div class="v2-review-kpi"><b>'+review.open.length+'</b><span>未完成事项</span></div><div class="v2-review-kpi"><b>'+review.longWaiting.length+'</b><span>长期等待事项</span></div></div></article>';
     h+='<article class="v2-page-card v2-review-section"><h2>本周重点完成工作</h2>'+doneHTML+'</article><article class="v2-page-card v2-review-section"><h2>未完成事项</h2>'+openHTML+'</article><article class="v2-page-card v2-review-section"><h2>延期事项</h2>'+overHTML+'</article><article class="v2-page-card v2-review-section"><h2>长期等待事项</h2>'+waitHTML+'</article><article class="v2-page-card v2-review-section"><h2>下周重点</h2>'+nextHTML+'</article></div>';
     h+='<div class="v2-review-stack"><article class="v2-page-card v2-review-section"><h2>AI 周报 / 月报</h2><p>仅基于已保存的工作记录、任务状态和项目上下文生成，不会自动修改数据。</p><div class="v2-review-ai"><button class="v2-toolbar-btn" type="button" data-v2-ai-action="reviewWeek">AI周报</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="reviewMonth">AI月报</button></div><div class="v2-review-ai-result">'+(v2ReviewAI.week?v2AIResultHTML(v2ReviewAI.week):'')+(v2ReviewAI.month?v2AIResultHTML(v2ReviewAI.month):'')+'</div></article><article class="v2-page-card v2-review-section"><h2>复盘入口</h2><p>想看原始事实，请打开工作记录；想处理具体事项，请回到任务页面。</p><div class="v2-review-ai"><button class="v2-toolbar-btn" type="button" data-v2-nav="records">查看工作记录</button><button class="v2-toolbar-btn" type="button" data-v2-nav="tasks" data-v2-tab="completed">查看已完成任务</button></div></article></div></div>';
-    $('v2Content').innerHTML=h;
+    $('v2Content').innerHTML=(embedded?v2RecordsTabsHTML():'')+h;
   }
 
   /* 提醒目标：一次性提醒、截止提醒、等待跟进提醒；snooze 会暂时覆盖原目标。 */
@@ -5334,6 +5341,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function switchV2(mode){
     if(VIEW_ALIASES[mode])mode=VIEW_ALIASES[mode];
+    if(mode==='review'){v2RecordsTab='review';mode='records';}
+    else if(mode==='records')v2RecordsTab='records';
     if(V2_TASK_TABS.indexOf(mode)>=0){v2TaskTab=mode;mode='tasks';}
     if(mode==='kanban'){v2TaskView='board';mode='tasks';}
     if(V2_MODES.indexOf(mode)<0)mode='home';
@@ -5358,6 +5367,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2Navigate(target,options){
     options=options||{};
     var mode=VIEW_ALIASES[target]||target;
+    var recordTab=options.recordTab==='records'||options.recordTab==='review'?options.recordTab:'';
+    if(mode==='review'){if(!recordTab)recordTab='review';mode='records';}
     if(V2_TASK_TABS.indexOf(mode)>=0){options.tab=mode;mode='tasks';}
     if(mode==='kanban'){options.view='board';mode='tasks';}
     if(mode==='today'||mode==='all'||mode==='waiting'||mode==='followup'||mode==='tbd'||mode==='completed'||mode==='archived'){options.tab=mode;mode='tasks';}
@@ -5366,7 +5377,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
       if(options.view==='list'||options.view==='board')v2TaskView=options.view;
     }
     if(mode==='inbox'&&(options.section==='pending'||options.section==='processed'))v2InboxSection=options.section;
-    switchV2(V2_MODES.indexOf(mode)>=0?mode:'home');
+    switchV2(V2_MODES.indexOf(mode)>=0?(mode==='records'&&recordTab==='review'?'review':mode):'home');
   }
   window.v2Navigate=v2Navigate;
 
@@ -5387,6 +5398,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(e.target.closest('#v2InboxAI')){runInboxAIAnalysis($('v2InboxText').value,'paste',v2InboxActiveId,{origin:'inbox',navigateOnSuccess:false});return;}
     var projectTaskAction=e.target.closest('[data-v2-project-task-action]');if(projectTaskAction){var projectTask=todoById(projectTaskAction.getAttribute('data-task-id')),projectTaskActionName=projectTaskAction.getAttribute('data-v2-project-task-action');if(projectTask&&projectTaskActionName==='edit')v2OpenTaskModal(projectTask.id,false);else if(projectTask&&projectTaskActionName==='remove'){projectTask.pid=null;projectTask.projectId=null;v2Touch(projectTask);save();v2Render();toast('已移出项目');}return;}
     var projectTaskRow=e.target.closest('[data-v2-project-task-id]');if(projectTaskRow&&!e.target.closest('button,select,input')){v2OpenTaskModal(projectTaskRow.getAttribute('data-v2-project-task-id'),false);return;}
+    var recordTabBtn=e.target.closest('[data-v2-record-tab]');if(recordTabBtn){var recordTab=recordTabBtn.getAttribute('data-v2-record-tab');if(recordTab==='records'||recordTab==='review'){v2RecordsTab=recordTab;v2Render();}return;}
     var taskTabBtn=e.target.closest('[data-v2-task-tab]');if(taskTabBtn){v2TaskTab=taskTabBtn.getAttribute('data-v2-task-tab');v2Render();return;}
     var taskViewBtn=e.target.closest('[data-v2-task-view]');if(taskViewBtn){v2TaskView=taskViewBtn.getAttribute('data-v2-task-view')==='board'?'board':'list';v2Render();return;}
     var inboxSectionBtn=e.target.closest('[data-v2-inbox-section]');if(inboxSectionBtn){v2InboxSection=inboxSectionBtn.getAttribute('data-v2-inbox-section')==='processed'?'processed':'pending';v2Render();return;}
@@ -5396,7 +5408,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var smart=e.target.closest('[data-v2-smart-target]');if(smart){var smartTarget=smart.getAttribute('data-v2-smart-target'),smartTab=smart.getAttribute('data-v2-smart-tab');if(smartTarget==='reminders'){v2ReminderCenterOpen=true;renderV2ReminderCenter();}else v2Navigate(smartTarget,{tab:smartTab});e.stopPropagation();return;}
     var aiAction=e.target.closest('[data-v2-ai-action]');if(aiAction){var aa=aiAction.getAttribute('data-v2-ai-action'),noticeEntryId=aiAction.getAttribute('data-v2-ai-entry-id')||v2InboxActiveId;if(aa==='settings')openDrawer();else if(aa==='local')v2UseLocalInbox(noticeEntryId);else if(aa==='retry'){var retryEntry=v2FindInbox(noticeEntryId);if(retryEntry)runInboxAIAnalysis(retryEntry.rawText,retryEntry.sourceType,retryEntry.id,{origin:v2InboxAIState.origin||'inbox',showHome:v2InboxAIState.showHome,navigateOnSuccess:v2InboxAIState.origin==='home'||v2InboxAIState.origin==='assistant'});}else if(aa==='planToday')v2RequestPlanToday();else if(aa==='summarizeDay')v2RequestDaySummary();else if(aa==='summarizeWeek')v2RequestWeekSummary();else if(aa==='reviewWeek')v2RequestReviewSummary('week');else if(aa==='reviewMonth')v2RequestReviewSummary('month');return;}
     var planBtn=e.target.closest('[data-v2-plan-apply]');if(planBtn){v2ApplyPlan(planBtn.getAttribute('data-v2-plan-apply'));return;}
-    var nav=e.target.closest('[data-v2-nav]');if(nav){var target=nav.getAttribute('data-v2-nav');v2Navigate(target,{tab:nav.getAttribute('data-v2-tab'),view:nav.getAttribute('data-v2-view'),section:nav.getAttribute('data-v2-section')});return;}
+    var nav=e.target.closest('[data-v2-nav]');if(nav){var target=nav.getAttribute('data-v2-nav');v2Navigate(target,{tab:nav.getAttribute('data-v2-tab'),view:nav.getAttribute('data-v2-view'),section:nav.getAttribute('data-v2-section'),recordTab:nav.getAttribute('data-v2-record-tab')});return;}
     var general=e.target.closest('[data-v2-action]');if(general){var ga=general.getAttribute('data-v2-action');if(ga==='open-capture'){$('quickRecordText').value='';v2ShowModal('quickRecordMask');}else if(ga==='open-new-task')v2OpenTaskModal(null,false);else if(ga==='inbox-ai'){var homeEntry=v2InboxPending()[0];if(homeEntry)runInboxAIAnalysis(homeEntry.rawText,homeEntry.sourceType,homeEntry.id,{origin:'home',showHome:true,navigateOnSuccess:true});}return;}
     var boardBtn=e.target.closest('.v2-task-board [data-act]');if(boardBtn){v2TaskBoardAction(boardBtn.getAttribute('data-id'),boardBtn.getAttribute('data-act'));return;}
     var taskBtn=e.target.closest('[data-v2-task-action]');if(taskBtn){var id=taskBtn.getAttribute('data-task-id'),t=todoById(id),act=taskBtn.getAttribute('data-v2-task-action');if(!t)return;if(act==='complete'){v2CompleteTask(t,true);save();v2Render();toast('已完成，已写入今天已完成');}else if(act==='restore'){v2CompleteTask(t,false);save();v2Render();toast('已恢复为待办');}else if(act==='unarchive'){v2RestoreArchivedTask(t);save();v2Render();toast('已恢复为待办');}else if(act==='edit'){v2OpenTaskModal(id,false);}else if(act==='waiting'){v2OpenTaskModal(id,true);}else if(act==='followup'){v2OpenTaskModal(id,'followup');}else if(act==='move-up'){v2MoveTask(id,-1);}else if(act==='move-down'){v2MoveTask(id,1);}else if(act==='toggle-today'){t.isToday=!t.isToday;v2Touch(t);save();v2Render();toast(t.isToday?'已安排到今天':'已取消今天标记');}else if(act==='delete'){v2TaskBoardAction(id,'del');}return;}
