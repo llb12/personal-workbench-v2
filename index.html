@@ -1426,6 +1426,8 @@ body:not(.v2-view) #v2Panel{display:none!important}
       <label class="v2-field"><span>开始等待</span><input class="inp" id="taskEditWaitingSince" type="date"></label>
       <label class="v2-field"><span>计划跟进</span><input class="inp" id="taskEditFollowUp" type="datetime-local"></label>
       <label class="v2-field wide"><span>跟进备注</span><input class="inp" id="taskEditFollowUpNote" type="text" placeholder="等什么、下一步要问什么"></label>
+      <label class="v2-field wide"><span>完成说明（可选）</span><textarea class="inp" id="taskEditCompletionNote" style="height:58px;resize:vertical"></textarea></label>
+      <label class="v2-field wide"><span>成果 / 结果（可选）</span><textarea class="inp" id="taskEditOutcome" style="height:58px;resize:vertical"></textarea></label>
     </div>
     <div class="v2-source-box" id="taskEditSource"></div>
     <div class="v2-ai-assist" id="taskAIAssist">
@@ -5261,6 +5263,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     $('taskEditWaitingSince').value=t?(v2DateOnly(t.waitingSince)||((forceStatus==='waiting'||v2IsWaiting(t))?fmt(today0()):'')):'';
     $('taskEditFollowUp').value=t?v2InputDateTime(t.followUpAt):'';
     $('taskEditFollowUpNote').value=t?(t.followUpNote||''):'';
+    $('taskEditCompletionNote').value=t?(t.completionNote||''):'';
+    $('taskEditOutcome').value=t?(t.outcome||''):'';
     $('taskEditSource').textContent=t?(t.sourceText?('来源：'+v2SourceLabel(t.sourceType)+'\n'+t.sourceText):'此任务为手动创建，暂无原始来源文本。'):'保存后会作为手动创建的任务加入工作台。';
     $('taskAIResult').innerHTML='';v2HomeAI.task=null;renderAIDrawer();
     $('taskModalKicker').textContent=t?((forceStatus==='waiting'||forceStatus==='followup')?'STATUS UPDATE':'TASK DETAILS'):'NEW TASK';
@@ -5277,9 +5281,9 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var oldSchedule=[v2DueMode(t),t.due,t.reminderAt,t.dueReminder,t.followUpAt].join('|');
     var dueMode=['fixed','tbd','none'].indexOf($('taskEditDueMode').value)>=0?$('taskEditDueMode').value:'none',due=$('taskEditDue').value||null;
     if(dueMode==='fixed'&&!due)dueMode='none';
-    t.text=title;t.title=title;t.nextAction=$('taskEditNextAction').value.trim();t.pid=$('taskEditProject').value||null;t.projectId=t.pid;t.pri=$('taskEditPriority').value;t.priority=t.pri;t.dueMode=dueMode;t.due=dueMode==='fixed'?due:null;t.dueAt=dueMode==='fixed'?due+'T23:59:59':null;t.reminderAt=$('taskEditReminder').value||null;t.dueReminder=$('taskEditDueReminder').value||'none';t.followUpAt=$('taskEditFollowUp').value||null;t.followUpNote=$('taskEditFollowUpNote').value.trim();t.waitingFor=$('taskEditWaitingFor').value.trim();t.owner=$('taskEditOwner').value.trim();
+    t.text=title;t.title=title;t.nextAction=$('taskEditNextAction').value.trim();t.pid=$('taskEditProject').value||null;t.projectId=t.pid;t.pri=$('taskEditPriority').value;t.priority=t.pri;t.dueMode=dueMode;t.due=dueMode==='fixed'?due:null;t.dueAt=dueMode==='fixed'?due+'T23:59:59':null;t.reminderAt=$('taskEditReminder').value||null;t.dueReminder=$('taskEditDueReminder').value||'none';t.followUpAt=$('taskEditFollowUp').value||null;t.followUpNote=$('taskEditFollowUpNote').value.trim();t.completionNote=$('taskEditCompletionNote').value.trim();t.outcome=$('taskEditOutcome').value.trim();t.waitingFor=$('taskEditWaitingFor').value.trim();t.owner=$('taskEditOwner').value.trim();
     var status=$('taskEditStatus').value;
-    if(status==='done'){v2CompleteTask(t,true);}
+    if(status==='done'){if(t.done){t.done=true;t.status='done';}else v2CompleteTask(t,true);}
     else{t.done=false;t.doneAt=null;t.completedAt=null;t.status=status==='waiting'?'waiting':status==='followup'?'followup':status==='archived'?'archived':status==='doing'?'doing':'todo';t.waitingSince=t.status==='waiting'?($('taskEditWaitingSince').value||fmt(today0())):null;t.isToday=t.status==='waiting'?false:(dueMode==='fixed'&&(t.isToday||due===fmt(today0())));}
     var newSchedule=[v2DueMode(t),t.due,t.reminderAt,t.dueReminder,t.followUpAt].join('|');if(oldSchedule!==newSchedule)t.notificationKeys=[];if(t.done)t.isToday=false;t.snoozedUntil=null;v2Touch(t);if(t.status==='archived'||t.done)v2RemoveReminder(t.id);save();v2CloseModal('taskModalMask');v2Render();toast(isNew?'任务已创建':'任务已更新');
   }
