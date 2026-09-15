@@ -3456,7 +3456,6 @@ function renderBadges(){
   setBadge('nbKb',data.todos.filter(function(t){return !t.done&&!isArchivedTask(t);}).length);
   var wd=0,ws=weekStart(new Date()).getTime();
   data.todos.forEach(function(t){if(!t.done||!t.doneAt)return;var d=new Date(t.doneAt);d.setHours(0,0,0,0);if(d.getTime()>=ws)wd++;});
-   setBadge('nbRev',wd);
   var L=getLayout();
   LAYOUT_IDS.forEach(function(id){
     var nav=document.querySelector('.nav-item[data-nav="'+id+'"]');
