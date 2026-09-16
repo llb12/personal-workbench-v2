@@ -822,13 +822,13 @@ body.has-bg .rail,body.has-bg .titlebar,body.has-bg .card,body.has-bg .exp-bar,b
 .core-project-add{display:grid;grid-template-columns:1fr auto;gap:7px;padding:0 11px 11px}
 .core-project-add select{min-width:0}
 .core-project-task-list{display:flex;flex-direction:column;gap:6px}
-.core-project-task{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer}
+.core-project-task{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;cursor:pointer}
 .core-project-task:hover{background:var(--card);border-color:var(--primary)}
-.core-project-task-main{flex:1;min-width:0}
-.core-project-task-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.core-project-task-main{min-width:0}
+.core-project-task-title{white-space:normal;overflow-wrap:anywhere;font-size:12px}
 .core-project-task-meta{display:flex;gap:5px;align-items:center;margin-top:3px;color:var(--muted);font-size:10.5px}
-.core-project-task-actions{display:flex;align-items:center;gap:5px;flex:none}
-.core-project-task-actions select{width:112px;height:26px;font-size:10.5px}
+.core-project-task-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
+.core-project-task-actions select{width:112px;max-width:100%;height:26px;font-size:10.5px}
 .core-project-task-actions button{height:26px;padding:0 6px;font-size:10.5px}
 .core-done-distribution{display:flex;gap:7px;flex-wrap:wrap;padding:11px 14px;border-bottom:1px solid var(--line2)}
 .core-done-distribution .chip{cursor:default}
@@ -4174,7 +4174,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var owner=v2TaskProject(t),meta='<span class="v2-chip">'+esc(v2StatusLabel(t.status||'todo'))+'</span>';
     if(v2DueChip(t))meta+=v2DueChip(t);
     var actions='<button class="btn-ghost" type="button" data-v2-project-task-action="edit" data-task-id="'+esc(t.id)+'">打开</button>';
-    if(!completed)actions+='<select class="inp" aria-label="移动任务到项目" data-v2-project-task-project data-task-id="'+esc(t.id)+'">'+v2ProjectOptions(v2TaskProjectId(t))+'</select><button class="btn-ghost" type="button" data-v2-project-task-action="remove" data-task-id="'+esc(t.id)+'">移出项目</button>';
+    if(!completed)actions+='<select class="inp" aria-label="移动任务到项目" data-v2-project-task-project data-task-id="'+esc(t.id)+'">'+v2ProjectOptions(v2TaskProjectId(t))+'</select><button class="btn-ghost" type="button" data-v2-project-task-action="remove" data-task-id="'+esc(t.id)+'">移出项目</button><button class="btn-ghost" type="button" data-v2-project-task-action="delete" data-task-id="'+esc(t.id)+'">删除</button>';
     return '<div class="core-project-task" data-v2-project-task-id="'+esc(t.id)+'" role="button" tabindex="0" aria-label="打开任务：'+esc(v2TaskTitle(t))+'"><div class="core-project-task-main"><div class="core-project-task-title">'+esc(v2TaskTitle(t))+'</div><div class="core-project-task-meta">'+meta+'</div></div><div class="core-project-task-actions">'+actions+'</div></div>';
   }
   function v2DueChip(t){
@@ -5391,7 +5391,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   $('v2Content').addEventListener('click',function(e){
     if(e.target.closest('#v2InboxAnalyze')){v2PrepareInbox($('v2InboxText').value,'paste',v2InboxActiveId);return;}
     if(e.target.closest('#v2InboxAI')){runInboxAIAnalysis($('v2InboxText').value,'paste',v2InboxActiveId,{origin:'inbox',navigateOnSuccess:false});return;}
-    var projectTaskAction=e.target.closest('[data-v2-project-task-action]');if(projectTaskAction){var projectTask=todoById(projectTaskAction.getAttribute('data-task-id')),projectTaskActionName=projectTaskAction.getAttribute('data-v2-project-task-action');if(projectTask&&projectTaskActionName==='edit')v2OpenTaskModal(projectTask.id,false);else if(projectTask&&projectTaskActionName==='remove'){projectTask.pid=null;projectTask.projectId=null;v2Touch(projectTask);save();v2Render();toast('已移出项目');}return;}
+    var projectTaskAction=e.target.closest('[data-v2-project-task-action]');if(projectTaskAction){var projectTask=todoById(projectTaskAction.getAttribute('data-task-id')),projectTaskActionName=projectTaskAction.getAttribute('data-v2-project-task-action');if(projectTask&&projectTaskActionName==='edit')v2OpenTaskModal(projectTask.id,false);else if(projectTask&&projectTaskActionName==='remove'){projectTask.pid=null;projectTask.projectId=null;v2Touch(projectTask);save();v2Render();toast('已移出项目');}else if(projectTask&&projectTaskActionName==='delete'){v2TaskBoardAction(projectTask.id,'del');}return;}
     var projectTaskRow=e.target.closest('[data-v2-project-task-id]');if(projectTaskRow&&!e.target.closest('button,select,input')){v2OpenTaskModal(projectTaskRow.getAttribute('data-v2-project-task-id'),false);return;}
     var recordTabBtn=e.target.closest('[data-v2-record-tab]');if(recordTabBtn){var recordTab=recordTabBtn.getAttribute('data-v2-record-tab');if(recordTab==='records'||recordTab==='review'){v2RecordsTab=recordTab;v2Render();}return;}
     var taskTabBtn=e.target.closest('[data-v2-task-tab]');if(taskTabBtn){v2TaskTab=taskTabBtn.getAttribute('data-v2-task-tab');v2Render();return;}
