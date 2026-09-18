@@ -1862,6 +1862,7 @@ function $(id){return document.getElementById(id);}
 var saveTimer=null,saveQueue=Promise.resolve(),saveSeq=0,saveDirty=false,unloadSeq=0;
 function prepareDataForSave(){
   data.schemaVersion=2;
+  data.schemaVersion=3;
   var now=new Date().toISOString();
   (data.todos||[]).forEach(function(t){
     if(!t.id)t.id=genId('t');
