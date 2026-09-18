@@ -1,6 +1,6 @@
 {
   "name": "personal-workbench",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "productName": "个人工作台",
   "description": "个人工作执行助手",
   "main": "main.js",
