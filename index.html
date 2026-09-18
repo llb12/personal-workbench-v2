@@ -5018,6 +5018,17 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     appendWorkLog('unarchive',t,v2Now());
     return true;
   }
+  function v2DeleteTaskWithLog(t,id){
+    if(!t)return false;
+    if(!confirm('删除这条正式任务？收件箱原始记录不会受影响。'))return false;
+    appendWorkLog('delete',t,v2Now());
+    data.todos=data.todos.filter(function(x){return x.id!==id;});
+    v2ReminderQueue=v2ReminderQueue.filter(function(x){return x.id!==id;});
+    if(data.focusId===id)data.focusId=null;
+    if(v2EditingTaskId===id){v2EditingTaskId=null;v2HomeAI.task=null;}
+    renderBadges();renderTodos();renderKanban();renderAlert();renderReview();save();v2Render();
+    return true;
+  }
   function v2TaskBoardAction(id,act){
     var t=todoById(id);if(!t)return;
     if(act==='done')v2CompleteTask(t,true);
