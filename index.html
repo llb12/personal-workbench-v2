@@ -1789,6 +1789,30 @@ function normalize(d) {
       });
     });
   }
+  var workLogSeen={};
+  if(Array.isArray(d.workLog)){
+    d.workLog.forEach(function(entry){
+      var normalized=normalizeWorkLogEntry(entry);
+      if(!normalized||workLogSeen[normalized.id])return;
+      workLogSeen[normalized.id]=true;
+      o.workLog.push(normalized);
+    });
+  }
+  if(Number(d.schemaVersion||0)<3||!Array.isArray(d.workLog)){
+    o.todos.forEach(function(t){
+      if(!t.done)return;
+      var stamp=t.completedAt||t.doneAt||t.updatedAt||t.createdAt;
+      if(!stamp)return;
+      var exists=o.workLog.some(function(entry){return entry.type==='complete'&&String(entry.taskId||'')===String(t.id||'')&&String(entry.at)===String(stamp);});
+      if(exists)return;
+      var id='wl:migrate:complete:'+String(t.id||'none')+':'+String(stamp);
+      if(workLogSeen[id])return;
+      workLogSeen[id]=true;
+      o.workLog.push({id:id,at:String(stamp),type:'complete',taskId:t.id||null,projectId:t.projectId||t.pid||null,snapshot:workLogTaskSnapshot(t)});
+    });
+  }
+  o.workLog.sort(function(a,b){return new Date(a.at)-new Date(b.at);});
+
   if (Array.isArray(d.projects)) {
     o.projects = d.projects.filter(function (p) { return p && typeof p === 'object'; }).map(function (p) {
       return Object.assign({},p,{
