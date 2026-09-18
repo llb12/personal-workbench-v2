@@ -4310,6 +4310,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     t.doneAt=stamp;t.completedAt=stamp;
     if(done){t.isToday=false;t.snoozedUntil=null;t.notificationKeys=[];}
     t.updatedAt=v2Now();
+    if(done&&!wasDone)appendWorkLog('complete',t,stamp);
+    else if(!done&&wasDone)appendWorkLog('restore',t,t.updatedAt);
   }
   function v2Touch(t){if(t)t.updatedAt=v2Now();}
 
