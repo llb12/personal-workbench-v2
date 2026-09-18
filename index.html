@@ -5127,7 +5127,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
 
   function renderV2Projects(){
-    renderV3Projects();return;
+    renderV3ProjectStatus();return;
     v2Header('项目','项目负责聚合进度、节点、等待事项和成果；日常执行请回到任务页面。');
     var projects=(data.projects||[]).slice().sort(function(a,b){return (a.done-b.done)||(a.sort||0)-(b.sort||0);});
     var h='<div class="v2-page-card"><div class="v2-page-toolbar"><input class="inp search" id="v2NewProject" type="text" placeholder="新建项目名称"><button class="btn-primary" type="button" data-v2-project-action="add">新建项目</button><span class="v2-filter-note">'+projects.filter(function(p){return !p.done;}).length+' 个进行中</span></div><div class="core-project-grid">';
