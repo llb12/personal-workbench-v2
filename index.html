@@ -4389,13 +4389,19 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2AIInvoke(action,extra,done){
     var ai=aiBridge();if(!ai||typeof ai.run!=='function'){done({engine:'unconfigured',code:'AI_UNAVAILABLE',message:'当前环境不支持 AI 助手'});return;}
     if(v2AiBusy){toast('已有 AI 操作正在进行');done({engine:'busy',code:'AI_BUSY',message:'已有 AI 操作正在进行'});return;}
-    ai.getConfig().then(function(config){
+    v2AiBusy=true;v2Render();if(typeof renderAIDrawer==='function')renderAIDrawer();
+    var settled=false,released=false;
+    function release(){if(released)return;released=true;v2AiBusy=false;v2Render();if(typeof renderAIDrawer==='function')renderAIDrawer();}
+    function finish(result){if(settled)return;settled=true;try{done(result);}finally{release();}}
+    Promise.resolve().then(function(){return ai.getConfig();}).then(function(config){
       v2AiConfig=config||{};
-      if(!config||!config.enabled||!config.hasApiKey){done({engine:'unconfigured',code:config&&config.enabled?'AI_NOT_CONFIGURED':'AI_DISABLED',message:config&&config.enabled?'尚未配置 AI 整理':'AI 助手尚未启用'});return;}
+      if(!config||!config.enabled||!config.hasApiKey){finish({engine:'unconfigured',code:config&&config.enabled?'AI_NOT_CONFIGURED':'AI_DISABLED',message:config&&config.enabled?'尚未配置 AI 整理':'AI 助手尚未启用'});return;}
       var context=buildAIContext(action,extra,config);context.privacyMode=config.privacyMode||'compact';
-      var proceed=function(){v2AiBusy=true;v2Render();if(typeof renderAIDrawer==='function')renderAIDrawer();ai.run(action,context).then(function(result){done(result||{engine:'error',message:'AI 未返回结果'});}).catch(function(){done({engine:'error',message:'AI 操作失败，原始内容已保留'});}).finally(function(){v2AiBusy=false;v2Render();if(typeof renderAIDrawer==='function')renderAIDrawer();});};
-      if(config.privacyMode==='confirm')v2OpenAIConfirm(context,proceed);else proceed();
-    }).catch(function(){done({engine:'error',message:'无法读取 AI 设置，原始内容已保留'});});
+      var proceed=function(){Promise.resolve().then(function(){return ai.run(action,context);}).then(function(result){finish(result||{engine:'error',message:'AI 未返回结果'});}).catch(function(){finish({engine:'error',message:'AI 操作失败，原始内容已保留'});});};
+      if(config.privacyMode==='confirm'){
+        if(!v2OpenAIConfirm(context,proceed,function(){finish({engine:'cancelled',code:'AI_CANCELLED',message:'AI 操作已取消'});})){finish({engine:'busy',code:'AI_BUSY',message:'已有 AI 操作正在进行'});}
+      }else proceed();
+    }).catch(function(){finish({engine:'error',message:'无法读取 AI 设置，原始内容已保留'});});
   }
 
   /* 本地整理作为无 AI 时的稳定兜底，AI 只生成待确认候选或建议。 */
