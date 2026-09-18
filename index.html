@@ -5015,6 +5015,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2RestoreArchivedTask(t){
     if(!t||!isArchivedTask(t))return false;
     v2CompleteTask(t,false);v2RemoveReminder(t.id);
+    appendWorkLog('unarchive',t,v2Now());
     return true;
   }
   function v2TaskBoardAction(id,act){
