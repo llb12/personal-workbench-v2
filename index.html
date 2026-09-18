@@ -1693,6 +1693,50 @@ function normalizeAIMeta(value){
   var confidence=(a.confidence===null||a.confidence===undefined||a.confidence==='')?null:Number(a.confidence);
   return {createdByAI:a.createdByAI===true,confidence:typeof confidence==='number'&&isFinite(confidence)?Math.max(0,Math.min(1,confidence)):null,reason:typeof a.reason==='string'&&a.reason.trim()?a.reason.trim().slice(0,500):null,sourceAnalysisId:typeof a.sourceAnalysisId==='string'&&a.sourceAnalysisId? a.sourceAnalysisId.slice(0,120):null};
 }
+function workLogTaskSnapshot(t){
+  t=t&&typeof t==='object'?t:{};
+  var isDone=t.done===true||t.status==='done';
+  var projectId=(typeof t.projectId==='string'&&t.projectId)?t.projectId:((typeof t.pid==='string'&&t.pid)?t.pid:null);
+  var dueMode=(t.dueMode==='fixed'||t.dueMode==='tbd'||t.dueMode==='none')?t.dueMode:((t.dueAt||t.due)?'fixed':'none');
+  return {
+    id:typeof t.id==='string'?t.id:'',
+    title:String(t.title==null?(t.text==null?'':t.text):t.title),
+    status:isDone?'done':String(t.status||'todo'),
+    done:isDone,
+    doneAt:isDone?(t.doneAt||t.completedAt||null):null,
+    completedAt:isDone?(t.completedAt||t.doneAt||null):null,
+    dueMode:dueMode,
+    due:dueMode==='fixed'?(t.due||null):null,
+    dueAt:dueMode==='fixed'?(t.dueAt||(t.due?String(t.due)+'T23:59:59':null)):null,
+    priority:(t.priority==='high'||t.priority==='low')?t.priority:((t.pri==='high'||t.pri==='low')?t.pri:'mid'),
+    projectId:projectId,
+    source:String(t.sourceType||t.source||'manual'),
+    sourceType:String(t.sourceType||t.source||'manual'),
+    category:String(t.category||'todo'),
+    completionNote:String(t.completionNote||''),
+    outcome:String(t.outcome||'')
+  };
+}
+function normalizeWorkLogEntry(entry){
+  if(!entry||typeof entry!=='object'||Array.isArray(entry))return null;
+  var snapshot=workLogTaskSnapshot(entry.snapshot||{});
+  var taskId=(typeof entry.taskId==='string'&&entry.taskId)?entry.taskId:(snapshot.id||null);
+  var projectId=(typeof entry.projectId==='string'&&entry.projectId)?entry.projectId:(snapshot.projectId||null);
+  var type=typeof entry.type==='string'&&entry.type?entry.type:'status-change';
+  var at=entry.at||entry.createdAt||snapshot.completedAt||snapshot.doneAt||null;
+  if(!at||Number.isNaN(new Date(at).getTime()))return null;
+  var id=typeof entry.id==='string'&&entry.id?entry.id:['wl','legacy',type,taskId||'none',String(at)].join(':');
+  return {id:id,at:String(at),type:type,taskId:taskId,projectId:projectId,snapshot:snapshot};
+}
+function appendWorkLog(type,t,at,id){
+  if(!t||typeof t!=='object')return null;
+  if(!Array.isArray(data.workLog))data.workLog=[];
+  var stamp=at||new Date().toISOString(),snapshot=workLogTaskSnapshot(t);
+  var entry={id:id||genId('wl'),at:stamp,type:String(type||'status-change'),taskId:snapshot.id||null,projectId:snapshot.projectId||null,snapshot:snapshot};
+  data.workLog.push(entry);
+  return entry;
+}
+
 
 function normalize(d) {
   var o = JSON.parse(JSON.stringify(EMPTY));
