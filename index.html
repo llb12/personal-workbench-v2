@@ -1669,7 +1669,7 @@ function initializeData(raw){
   document.body.classList.remove('data-load-failed');
   applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();autoDefer();renderKanban();renderOverview();renderAlert();renderReview();renderCore();fetchWeather();applyBg();if(window.switchV2)window.switchV2('home');else window._pendingV2Mode='home';
   var n=new Date();$('saveHint').textContent=firstRun?'尚无本地数据':'已加载本地数据';checkBackupHint();
-  if(firstRun||needsV2Migration(raw))save(true);
+  if(firstRun||needsV3Migration(raw))save(true);
   if(window.v2CheckReminders)window.v2CheckReminders();
   if(data.city==='北京' && navigator.geolocation && (!data.geo || !data.geo.loc)){
     locateMe(true);
