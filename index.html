@@ -5088,6 +5088,25 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     h+='</div></article><aside class="v2-page-card v2-waiting-guide"><div class="v2-eyebrow">WAITING LOOP</div><h2>等待也要有下一步</h2><p>事情交出去以后，记录等谁、等什么和下一次要问什么，到时间会进入提醒。</p><ol><li>把任务状态切换为等待（被动）</li><li>写清楚等待对象与事项</li><li>设置计划跟进时间</li></ol><div class="v2-waiting-overview"><div class="v2-mini-stat"><b>'+list.length+'</b><span>等待中</span></div><div class="v2-mini-stat"><b>'+over+'</b><span>等待超时</span></div></div></aside></div>';
     $('v2Content').innerHTML=h;
   }
+  function renderV3Projects(){
+    v2Header('项目','项目只呈现当前状态、卡点和下一步；具体执行统一回到任务页面。');
+    var projects=(data.projects||[]).slice().sort(function(a,b){return (a.done-b.done)||(a.sort||0)-(b.sort||0);});
+    var h='<div class="v2-page-card"><div class="v2-page-toolbar"><input class="inp search" id="v2NewProject" type="text" placeholder="新建项目名称"><button class="btn-primary" type="button" data-v2-project-action="add">新建项目</button><span class="v2-filter-note">'+projects.filter(function(p){return !p.done;}).length+' 个进行中</span></div><div class="core-project-grid">';
+    if(!projects.length)h+='<div class="v2-empty"><strong>还没有项目</strong>项目用于聚合状态与下一步，执行动作统一放在任务页面。</div>';
+    projects.forEach(function(p){
+      var items=(data.todos||[]).filter(function(t){return v2TaskProjectId(t)===p.id&&!isArchivedTask(t);}),open=items.filter(v2IsOpen),waiting=open.filter(v2IsWaiting),done=items.filter(function(t){return t.done;}),total=open.length+done.length,pct=total?Math.round(done.length/total*100):0;
+      var nextTask=open.filter(function(t){return !v2IsWaiting(t);}).sort(v2TaskSort)[0]||waiting.slice().sort(function(a,b){return (v2ParseDate(a.followUpAt)||new Date('2999-01-01'))-(v2ParseDate(b.followUpAt)||new Date('2999-01-01'));})[0]||null;
+      var nextText=String(p.next||'').trim()||(nextTask?v2TaskTitle(nextTask):'暂无明确下一步');
+      var logs=(data.workLog||[]).filter(function(entry){return String(entry.projectId||entry.snapshot&&entry.snapshot.projectId||'')===String(p.id);}).sort(function(a,b){return (v2ParseDate(b.at)||new Date(0))-(v2ParseDate(a.at)||new Date(0));}).slice(0,4);
+      var logHTML=logs.length?'<ul>'+logs.map(function(entry){var t=v3WorkLogView(entry);return '<li>'+esc(v2DateTimeText(entry.at))+' · '+esc(v3WorkLogTypeLabel(entry.type))+' · '+esc(v2TaskTitle(t)||'未命名任务')+'</li>';}).join('')+'</ul>':'<p class="muted">暂无项目工作记录</p>';
+      h+='<article class="core-project'+(p.done?' done':'')+'"><div class="core-project-hd"><span class="proj-dot" style="background:'+esc(p.color||'#4f7cff')+'"></span><span class="core-project-name">'+esc(p.name)+'</span><span class="proj-prog">'+done.length+'/'+total+' · '+pct+'%</span><button class="hd-act" type="button" data-v2-project-action="ai-summary" data-project-id="'+esc(p.id)+'">AI 项目总结</button><button class="hd-act" type="button" data-v2-project-action="toggle" data-project-id="'+esc(p.id)+'">'+(p.done?'恢复项目':'完成项目')+'</button></div><div class="core-progress"><span style="width:'+pct+'%"></span></div>';
+      h+='<div class="core-project-fields"><label>截止日期<input class="inp" type="date" data-v2-project-field="due" data-project-id="'+esc(p.id)+'" value="'+esc(p.due||'')+'"></label><label>当前步骤<input class="inp" data-v2-project-field="step" data-project-id="'+esc(p.id)+'" value="'+esc(p.step||'')+'" placeholder="当前做到哪里"></label><label>下一步<input class="inp" data-v2-project-field="next" data-project-id="'+esc(p.id)+'" value="'+esc(p.next||'')+'" placeholder="明确下一步"></label><label>卡点<input class="inp" data-v2-project-field="blocker" data-project-id="'+esc(p.id)+'" value="'+esc(p.blocker||'')+'" placeholder="没有卡点可留空"></label></div>';
+      h+=(v2ProjectAI[p.id]?v2AIResultHTML(v2ProjectAI[p.id]):'')+'<div class="v2-project-sections"><section class="v2-project-section"><h4>当前状态</h4><p>'+esc(p.done?'已完成':'进行中')+' · 未完成 '+open.length+' · 等待 '+waiting.length+' · 已完成 '+done.length+'</p></section><section class="v2-project-section"><h4>下一步</h4><p><strong>'+esc(nextText)+'</strong></p></section><section class="v2-project-section"><h4>卡点</h4><p>'+(p.blocker?esc(p.blocker):'当前没有记录卡点')+'</p></section><section class="v2-project-section"><h4>最近工作记录</h4>'+logHTML+'</section></div>';
+      h+='<div class="core-project-add"><button class="btn-ghost" type="button" data-v2-nav="tasks">去任务页面执行</button></div></article>';
+    });
+    h+='</div></div>';$('v2Content').innerHTML=h;
+  }
+
   function renderV2Projects(){
     v2Header('项目','项目负责聚合进度、节点、等待事项和成果；日常执行请回到任务页面。');
     var projects=(data.projects||[]).slice().sort(function(a,b){return (a.done-b.done)||(a.sort||0)-(b.sort||0);});
