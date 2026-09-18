@@ -4379,8 +4379,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(Array.isArray(context.existingTasks))bits.push('用于去重的已有任务 '+context.existingTasks.length+' 项');
     return bits.join('<br>');
   }
-  function v2OpenAIConfirm(context,proceed){
-    v2PendingAI={context:context,proceed:proceed};var body=$('aiPreviewBody');if(body)body.innerHTML=v2AIConfirmBody(context);v2ShowModal('aiPreviewMask');
+  function v2OpenAIConfirm(context,proceed,cancel){
+    if(v2PendingAI)return false;
+    v2PendingAI={context:context,proceed:proceed,cancel:cancel};var body=$('aiPreviewBody');if(body)body.innerHTML=v2AIConfirmBody(context);v2ShowModal('aiPreviewMask');return true;
+  }
+  function v2CancelAIConfirm(){
+    var pending=v2PendingAI;v2PendingAI=null;v2CloseModal('aiPreviewMask');if(pending&&pending.cancel)pending.cancel();
   }
   function v2AIInvoke(action,extra,done){
     var ai=aiBridge();if(!ai||typeof ai.run!=='function'){done({engine:'unconfigured',code:'AI_UNAVAILABLE',message:'当前环境不支持 AI 助手'});return;}
