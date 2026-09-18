@@ -5201,6 +5201,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     h+='</div>'+(v2RecordAI.day||v2RecordAI.week?'<div class="v2-record-ai-result">'+(v2RecordAI.day?v2AIResultHTML(v2RecordAI.day):'')+(v2RecordAI.week?v2AIResultHTML(v2RecordAI.week):'')+'</div>':'')+'</div>';$('v2Content').innerHTML=h;
   }
   function v2RecordCopy(){
+    v3WorkLogCopy();return;
     var rows=[];v2RecordFiltered().sort(function(a,b){return (v2ParseDate(a.completedAt||a.doneAt)||new Date(0))-(v2ParseDate(b.completedAt||b.doneAt)||new Date(0));}).forEach(function(t){rows.push((v2DateTimeText(t.completedAt||t.doneAt)||'')+' '+v2TaskTitle(t)+(v2TaskProject(t)?' ['+v2TaskProject(t).name+']':''));});
     copyText(rows.length?rows.join('\n'):'当前筛选没有完成记录');
   }
