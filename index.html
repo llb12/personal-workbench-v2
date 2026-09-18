@@ -5036,6 +5036,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     else if(act==='unarchive')v2RestoreArchivedTask(t);
     else if(act==='defer'){t.due=fmt(addDays(today0(),1));t.dueAt=t.due+'T23:59:59';t.dueMode='fixed';t.defer=(t.defer||0)+1;t.lastDefer=fmt(today0());}
     else if(act==='block'){t.blocked=!t.blocked;if(!t.blocked)t.blocker='';}
+    else if(act==='del'){v2DeleteTaskWithLog(t,id);return;}
     else if(act==='del'){if(!confirm('删除这条正式任务？收件箱原始记录不会受影响。'))return;data.todos=data.todos.filter(function(x){return x.id!==id;});v2ReminderQueue=v2ReminderQueue.filter(function(x){return x.id!==id;});if(data.focusId===id)data.focusId=null;if(v2EditingTaskId===id){v2EditingTaskId=null;v2HomeAI.task=null;}renderBadges();}
     else return;
     renderTodos();renderKanban();renderAlert();renderReview();save();v2Render();
