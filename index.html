@@ -5370,6 +5370,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2SaveTaskModal(){
     var title=$('taskEditTitle').value.trim();if(!title){toast('任务名称不能为空');return;}
     var t=todoById(v2EditingTaskId),isNew=!t,stamp=v2Now();
+    var oldStatus=t?t.status:null,oldDone=t?!!t.done:false;
     if(!t){
       t={id:genId('t'),text:title,title:title,description:'',nextAction:'',category:'todo',pri:'mid',priority:'mid',done:false,doneAt:null,completedAt:null,due:null,dueAt:null,dueMode:'none',reminderAt:null,dueReminder:'none',followUpAt:null,waitingFor:'',waitingSince:null,followUpNote:'',status:'todo',sourceType:'manual',sourceText:'',sourceId:null,aiMeta:{createdByAI:false,confidence:null,reason:null,sourceAnalysisId:null},createdAt:stamp,updatedAt:stamp,lastNotifiedAt:null,notificationKeys:[],snoozedUntil:null,isToday:false,sortOrder:Date.now(),tags:[],defer:0,lastDefer:null,sort:Date.now(),owner:'',note:'',blocked:false,blocker:'',pid:null,projectId:null};
       data.todos.unshift(t);v2EditingTaskId=t.id;
