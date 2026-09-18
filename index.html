@@ -1960,6 +1960,7 @@ function prepareDataForSave(){
     t.isToday=!!t.isToday;t.sortOrder=(typeof t.sortOrder==='number'&&isFinite(t.sortOrder))?t.sortOrder:(typeof t.sort==='number'?t.sort:null);
     t.tags=Array.isArray(t.tags)?t.tags.filter(function(x){return typeof x==='string';}):[];
   });
+  if(!Array.isArray(data.workLog))data.workLog=[];
   if(!Array.isArray(data.inbox))data.inbox=[];
   data.theme=(data.theme==='dark'||data.theme==='system')?data.theme:'light';
   data.bgIntensity=typeof data.bgIntensity==='number'&&isFinite(data.bgIntensity)?Math.max(0,Math.min(.7,data.bgIntensity)):.18;
