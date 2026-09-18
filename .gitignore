@@ -10,6 +10,13 @@ data.json
 # Dependencies
 node_modules/
 
+# Build artifacts
+release/
+dist/
+*.exe
+*.nsis.7z
+*.blockmap
+
 # OS
 .DS_Store
 Thumbs.db
