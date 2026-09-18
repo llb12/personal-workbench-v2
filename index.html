@@ -5235,6 +5235,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2ReviewData(){
     var td=today0(),todayKey=fmt(td),ws=weekStart(td),nextStart=addDays(ws,7),nextEnd=addDays(nextStart,6);
     var doneWeek=data.todos.filter(function(t){var d=v2ParseDate(t.completedAt||t.doneAt);return t.done&&!isArchivedTask(t)&&d&&d>=ws&&d<=addDays(td,1);}).sort(function(a,b){return (v2ParseDate(b.completedAt||b.doneAt)||new Date(0))-(v2ParseDate(a.completedAt||a.doneAt)||new Date(0));});
+    doneWeek=(data.workLog||[]).filter(function(entry){var d=v2ParseDate(entry&&entry.at);return entry&&entry.type==='complete'&&d&&d>=ws&&d<=addDays(td,1);}).sort(function(a,b){return (v2ParseDate(b.at)||new Date(0))-(v2ParseDate(a.at)||new Date(0));}).map(v3WorkLogView);
     var open=data.todos.filter(function(t){return v2IsOpen(t);}),overdue=open.filter(function(t){return v2Due(t)&&v2Due(t)<todayKey;}),waiting=open.filter(v2IsWaiting),longWaiting=waiting.filter(function(t){var d=v2ParseDate(t.waitingSince||t.updatedAt||t.createdAt);return d&&d<=addDays(td,-7);}),nextWeek=open.filter(function(t){var d=v2ParseDate(v2Due(t));return d&&d>=nextStart&&d<=nextEnd;}).sort(v2TaskSort);
     return {doneWeek:doneWeek,open:open,overdue:overdue,waiting:waiting,longWaiting:longWaiting,nextWeek:nextWeek};
   }
