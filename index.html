@@ -4169,6 +4169,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   var V2_RESERVED_INTERFACES=Object.freeze({weekView:'reserved',monthView:'reserved',workload:'reserved',trends:'reserved',recurringTasks:'reserved'});
   window.v2ReservedInterfaces=V2_RESERVED_INTERFACES;
   var v2ReminderQueue=[],v2RecordsTab='records',v2RecordRange='today',v2RecordCustomStart=fmt(today0()),v2RecordCustomEnd=fmt(today0()),v2RecordDate=fmt(today0()),v2RecordProject='',v2RecordCategory='';
+  var v2RecordKeyword='';
   var v2TaskFilters={keyword:'',priority:'',status:''},v2TaskSearchComposing=false;
 
   function v2Now(){return new Date().toISOString();}
