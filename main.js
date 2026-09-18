@@ -402,6 +402,25 @@ function validateImportData(obj) {
     }
   }
 
+  if (obj.workLog !== undefined) {
+    if (!Array.isArray(obj.workLog)) return 'workLog 必须是数组';
+    if (obj.workLog.length > 500000) return 'workLog 数量超过允许上限';
+    for (let i = 0; i < obj.workLog.length; i += 1) {
+      const entry = obj.workLog[i];
+      if (!isPlainObject(entry)) return 'workLog[' + i + '] 必须是对象';
+      if (entry.id !== undefined && typeof entry.id !== 'string') return 'workLog[' + i + '].id 必须是字符串';
+      if (entry.type !== undefined && typeof entry.type !== 'string') return 'workLog[' + i + '].type 必须是字符串';
+      if (entry.taskId !== undefined && entry.taskId !== null && typeof entry.taskId !== 'string') {
+        return 'workLog[' + i + '].taskId 必须是字符串或 null';
+      }
+      if (entry.projectId !== undefined && entry.projectId !== null && typeof entry.projectId !== 'string') {
+        return 'workLog[' + i + '].projectId 必须是字符串或 null';
+      }
+      if (entry.at !== undefined && !isDateTimeOrEmpty(entry.at)) return 'workLog[' + i + '].at 日期格式无效';
+      if (entry.snapshot !== undefined && !isPlainObject(entry.snapshot)) return 'workLog[' + i + '].snapshot 必须是对象';
+    }
+  }
+
   if (obj.projects !== undefined) {
     if (!Array.isArray(obj.projects)) return 'projects 必须是数组';
     if (obj.projects.length > 10000) return 'projects 数量超过允许上限';
