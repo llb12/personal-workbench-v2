@@ -4303,6 +4303,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2HomeTaskGroup(t){return ['逾期','今天','等待超时','跟进','普通任务'][v2HomeTaskRank(t)];}
   function v2CompleteTask(t,done){
     if(!t)return;
+    var wasDone=!!t.done;
     var stamp=done?v2Now():null;
     t.done=!!done;
     t.status=done?'done':(t.status==='waiting'?'waiting':(t.status==='followup'?'followup':'todo'));
