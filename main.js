@@ -151,8 +151,12 @@ function aiFailure(error, fallback) {
 }
 
 const EMPTY = {
+  schemaVersion: 3,
   todos: [],
+  projects: [],
   events: {},
+  inbox: [],
+  workLog: [],
   note: '',
   kanban: { todo: [], doing: [], done: [] },
   theme: 'light'
