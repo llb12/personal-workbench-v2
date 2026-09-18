@@ -5382,6 +5382,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var status=$('taskEditStatus').value;
     if(status==='done'){if(t.done){t.done=true;t.status='done';}else v2CompleteTask(t,true);}
     else{t.done=false;t.doneAt=null;t.completedAt=null;t.status=status==='waiting'?'waiting':status==='followup'?'followup':status==='archived'?'archived':status==='doing'?'doing':'todo';t.waitingSince=t.status==='waiting'?($('taskEditWaitingSince').value||fmt(today0())):null;t.isToday=t.status==='waiting'?false:(dueMode==='fixed'&&(t.isToday||due===fmt(today0())));}
+    if(!isNew){
+      if(oldStatus!=='archived'&&t.status==='archived')appendWorkLog('archive',t,v2Now());
+      else if(oldStatus==='archived'&&t.status!=='archived')appendWorkLog('unarchive',t,v2Now());
+      else if(oldDone&&!t.done)appendWorkLog('restore',t,v2Now());
+      else if(!oldDone&&!t.done&&oldStatus!==t.status)appendWorkLog('status-change',t,v2Now());
+    }
     var newSchedule=[v2DueMode(t),t.due,t.reminderAt,t.dueReminder,t.followUpAt].join('|');if(oldSchedule!==newSchedule)t.notificationKeys=[];if(t.done)t.isToday=false;t.snoozedUntil=null;v2Touch(t);if(t.status==='archived'||t.done)v2RemoveReminder(t.id);save();v2CloseModal('taskModalMask');v2Render();toast(isNew?'任务已创建':'任务已更新');
   }
   function v2TaskAIObject(){
