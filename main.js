@@ -352,6 +352,9 @@ function validateImportData(obj) {
     'accent', 'layout', 'noteSample', 'city', 'weather', 'geo',
     'bgPreset', 'bgCustom', 'bgCustomPath', 'bgIntensity', 'bgBlur', 'bgCardOpacity', 'bgMode', 'focusId', 'snap'
   ];
+  if (obj.schemaVersion !== undefined && (!Number.isInteger(obj.schemaVersion) || obj.schemaVersion < 1 || obj.schemaVersion > 3)) {
+    return 'schemaVersion 无效';
+  }
   if (!known.some(key => Object.prototype.hasOwnProperty.call(obj, key))) {
     return '文件中没有可识别的工作台数据';
   }
