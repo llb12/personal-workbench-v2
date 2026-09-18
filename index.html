@@ -2270,13 +2270,13 @@ function rowHTML(t,i,g){
     var dd=diffDays(parseD(t.due),today0());
     if(t.due<td)sub+='<span class="tag over-lg">逾期 '+(-dd)+' 天</span>';
     else if(dd===0)sub+='<span class="tag due">今天</span>';
-    else sub+='<span class="tag due">'+t.due.slice(5).replace('-','月')+'日 · 还有'+dd+'天</span>';
+    else sub+='<span class="tag due">'+esc(t.due.slice(5).replace('-','月'))+'日 · 还有'+dd+'天</span>';
     if(t.defer>0)sub+='<span class="tag defer">已顺延 '+t.defer+' 次</span>';
   }
   if(t.blocked)sub+='<span class="tag over">卡住</span>';
   if(t.sample)sub+='<span class="tag sample">示例</span>';
   var deferBtn=t.due&&t.due<td?'<button class="btn-defer" data-act="defer" data-i="'+i+'">顺延到明天</button>':'';
-  var dueBtn='<button class="btn-defer" data-act="due" data-i="'+i+'" title="设置/修改完成时间（同步到日历）">'+(t.due?('完成 '+t.due.slice(5).replace('-','月')+'日'):'设完成时间')+'</button>';
+  var dueBtn='<button class="btn-defer" data-act="due" data-i="'+i+'" title="设置/修改完成时间（同步到日历）">'+(t.due?('完成 '+esc(t.due.slice(5).replace('-','月'))+'日'):'设完成时间')+'</button>';
   var blockBtn=!t.done?'<button class="btn-defer" data-act="block" data-i="'+i+'">'+(t.blocked?'取消卡住':'标卡住')+'</button>':'';
   var focusBtn=!t.done?'<button class="btn-focus'+((data.focusId===t.id)?' on':'')+'" data-act="focus" data-i="'+i+'" title="钉为今日聚焦">'+((data.focusId===t.id)?'已聚焦':'聚焦')+'</button>':'';
   var drag=(g==='today'||g==='none');
