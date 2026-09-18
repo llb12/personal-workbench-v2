@@ -5144,6 +5144,45 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function v2RecordsTabsHTML(){
     return '<div class="v2-task-tabs" role="tablist" aria-label="工作记录页面"><button class="v2-task-tab'+(v2RecordsTab==='records'?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordsTab==='records'?'true':'false')+'" data-v2-record-tab="records">记录</button><button class="v2-task-tab'+(v2RecordsTab==='review'?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordsTab==='review'?'true':'false')+'" data-v2-record-tab="review">复盘</button></div>';
   }
+  function v3WorkLogTypeLabel(type){return {complete:'完成',restore:'恢复',archive:'归档',unarchive:'取消归档',delete:'删除','status-change':'状态变更'}[type]||'任务变更';}
+  function v3WorkLogView(entry){
+    var s=entry&&entry.snapshot&&typeof entry.snapshot==='object'?entry.snapshot:{};
+    var pid=(entry&&entry.projectId)||s.projectId||null;
+    return Object.assign({},s,{id:(entry&&entry.taskId)||s.id||'',pid:pid,projectId:pid,completedAt:entry&&entry.at||null,doneAt:entry&&entry.at||null,_workLogAt:entry&&entry.at||null,_workLogType:entry&&entry.type||'status-change',_workLogId:entry&&entry.id||''});
+  }
+  function v3WorkLogCategories(){
+    var set={};(data.workLog||[]).forEach(function(entry){var t=v3WorkLogView(entry);set[t.category||'manual']=1;});
+    var h='<option value="">全部分类</option>';Object.keys(set).sort().forEach(function(c){h+='<option value="'+esc(c)+'"'+(v2RecordCategory===c?' selected':'')+'>'+esc(v2CategoryLabel(c))+'</option>';});return h;
+  }
+  function v3WorkLogMatches(entry){
+    if(!entry||!entry.at)return false;
+    var t=v3WorkLogView(entry),d=v2DateOnly(entry.at),bounds=v2RecordBounds();
+    if(!d)return false;
+    if(bounds.start&&d<bounds.start)return false;if(bounds.end&&d>bounds.end)return false;
+    if(v2RecordProject&&v2TaskProjectId(t)!==v2RecordProject)return false;
+    if(v2RecordCategory&&(t.category||'manual')!==v2RecordCategory)return false;
+    var p=v2TaskProject(t),keyword=String(v2RecordKeyword||'').trim().toLowerCase();
+    if(keyword&&[v2TaskTitle(t),p?p.name:'',v2SourceLabel(t.sourceType),t.sourceType,t.completionNote,t.outcome,v3WorkLogTypeLabel(entry.type)].join(' ').toLowerCase().indexOf(keyword)<0)return false;
+    return true;
+  }
+  function v3WorkLogFiltered(){return (data.workLog||[]).filter(v3WorkLogMatches).sort(function(a,b){return (v2ParseDate(b.at)||new Date(0))-(v2ParseDate(a.at)||new Date(0));});}
+  function renderV3WorkLogRecordsContent(){
+    v2Header('工作记录','这里记录已经发生的任务事件；记录保存当时快照，不会因为任务恢复、归档或删除而消失。');
+    var list=v3WorkLogFiltered(),h='<div class="v2-page-card">'+v2RecordsTabsHTML()+'<div class="v2-record-ranges" role="tablist" aria-label="工作记录范围">';
+    ['today','week','month','custom'].forEach(function(range){h+='<button class="v2-record-range'+(v2RecordRange===range?' on':'')+'" type="button" role="tab" aria-selected="'+(v2RecordRange===range?'true':'false')+'" data-v2-record-range="'+range+'">'+v2RecordRangeLabel(range)+'</button>';});
+    h+='</div><div class="v2-record-custom"'+(v2RecordRange==='custom'?'':' hidden')+'><span>日期</span><input class="inp" type="date" id="v2RecordStart" value="'+esc(v2RecordCustomStart)+'"><span>至</span><input class="inp" type="date" id="v2RecordEnd" value="'+esc(v2RecordCustomEnd)+'"></div><div class="v2-record-toolbar"><input class="inp" type="search" id="v2RecordKeyword" placeholder="搜索工作记录" aria-label="搜索工作记录" value="'+esc(v2RecordKeyword)+'"><select class="inp" id="v2RecordProject">'+v2ProjectOptions(v2RecordProject).replace('无项目','全部项目')+'</select><select class="inp" id="v2RecordCategory">'+v3WorkLogCategories()+'</select><button class="v2-toolbar-btn" type="button" data-v2-record-action="clear-date">查看全部日期</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeDay">AI 日总结</button><button class="v2-toolbar-btn" type="button" data-v2-ai-action="summarizeWeek">AI 周总结</button><button class="v2-toolbar-btn v2-record-export" type="button" data-v2-record-action="copy">复制当前记录</button><span class="v2-filter-note">'+v2RecordRangeLabel()+' · '+list.length+' 条事件</span></div><div class="v2-record-list">';
+    if(!list.length)h+='<div class="v2-empty"><strong>'+esc(v2RecordRangeLabel())+'暂无工作记录</strong>完成、恢复、归档、删除或切换任务状态后，这里会留下时间线记录。</div>';
+    else{
+      var groups={};list.forEach(function(entry){var d=v2DateOnly(entry.at)||'更早';(groups[d]=groups[d]||[]).push(entry);});
+      Object.keys(groups).sort().reverse().forEach(function(d){h+='<section class="v2-record-day"><div class="v2-record-day-head"><strong>'+esc(d==='更早'?d:v2DateText(d,true))+'</strong><span>'+groups[d].length+' 条</span></div>';groups[d].forEach(function(entry){var t=v3WorkLogView(entry),p=v2TaskProject(t),stamp=entry.at,typeLabel=v3WorkLogTypeLabel(entry.type),open=t.id&&todoById(t.id)?'<button class="v2-toolbar-btn" type="button" aria-label="打开任务" data-v2-record-open="'+esc(t.id)+'">打开任务</button>':'<span class="v2-filter-note">历史快照</span>';h+='<div class="v2-record-line"><span class="v2-record-time">'+esc(v2TimeText(stamp)||'—')+'</span><div class="v2-record-line-main"><div class="v2-record-line-title">'+esc(v2TaskTitle(t)||'未命名任务')+'</div><div class="v2-record-line-meta"><span class="v2-chip">'+esc(typeLabel)+'</span>'+(p?'<span class="v2-chip project">'+esc(p.name)+'</span>':'')+'<span>'+esc(v2CategoryLabel(t.category||'manual'))+'</span><span>来源：'+esc(v2SourceLabel(t.sourceType))+'</span></div>'+(t.completionNote?'<div>完成说明：'+esc(t.completionNote)+'</div>':'')+(t.outcome?'<div>成果/结果：'+esc(t.outcome)+'</div>':'')+open+'</div></div>';});h+='</section>';});
+    }
+    h+='</div>'+(v2RecordAI.day||v2RecordAI.week?'<div class="v2-record-ai-result">'+(v2RecordAI.day?v2AIResultHTML(v2RecordAI.day):'')+(v2RecordAI.week?v2AIResultHTML(v2RecordAI.week):'')+'</div>':'')+'</div>';$('v2Content').innerHTML=h;
+  }
+  function v3WorkLogCopy(){
+    var rows=[];v3WorkLogFiltered().slice().reverse().forEach(function(entry){var t=v3WorkLogView(entry),p=v2TaskProject(t);rows.push((v2DateTimeText(entry.at)||'')+' ['+v3WorkLogTypeLabel(entry.type)+'] '+v2TaskTitle(t)+(p?' ['+p.name+']':''));});
+    copyText(rows.length?rows.join('\n'):'当前筛选没有工作记录');
+  }
+
   function renderV2Records(){
     if(v2RecordsTab==='review'){renderV2Review(true);return;}
     renderV2RecordsContent();
