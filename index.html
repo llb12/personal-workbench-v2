@@ -1810,6 +1810,7 @@ function normalize(d) {
   o.bgMode = ['cover','contain','center','repeat'].indexOf(d.bgMode)>=0 ? d.bgMode : 'cover';
   o.focusId = (typeof d.focusId === 'string') ? d.focusId : null;
   o.schemaVersion = 2;
+  o.schemaVersion = 3;
   if (Array.isArray(d.inbox)) {
     o.inbox = d.inbox.filter(function (x) { return x && typeof x === 'object'; }).map(function (x) {
       var state = (x.status === 'candidate' || x.status === 'converted' || x.status === 'ignored') ? x.status : 'new';
