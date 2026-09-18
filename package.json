@@ -9,7 +9,7 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win --x64"
+    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-win.ps1"
   },
   "devDependencies": {
     "electron": "43.4.1",
