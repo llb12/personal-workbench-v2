@@ -4325,6 +4325,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     return item;
   }
   function v2ContextRecords(limit,full){
+    var historyDays=Math.max(1,Number(limit)||30),since=addDays(today0(),-(historyDays-1));
+    return (data.workLog||[]).filter(function(entry){var d=v2ParseDate(entry&&entry.at);return d&&d>=since;}).sort(function(a,b){return v2ParseDate(b.at)-v2ParseDate(a.at);}).slice(0,Math.max(10,Number(v2AiConfig&&v2AiConfig.maxContextItems)||80)).map(function(entry){var item=v2ContextTask(v3WorkLogView(entry),full);item.eventType=entry.type||'status-change';item.eventAt=entry.at||null;return item;});
     var since=addDays(today0(),-(Math.max(1,Number(limit)||30)-1));
     return data.todos.filter(function(t){var d=v2ParseDate(t.completedAt||t.doneAt);return t.done&&d&&d>=since;}).sort(function(a,b){return v2ParseDate(b.completedAt||b.doneAt)-v2ParseDate(a.completedAt||a.doneAt);}).slice(0,Math.max(10,Number(v2AiConfig&&v2AiConfig.maxContextItems)||80)).map(function(t){return v2ContextTask(t,full);});
   }
