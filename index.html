@@ -5693,12 +5693,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   $('taskModalClose').addEventListener('click',function(){v2CloseModal('taskModalMask');});$('taskEditCancel').addEventListener('click',function(){v2CloseModal('taskModalMask');});$('taskEditSave').addEventListener('click',v2SaveTaskModal);$('taskEditDueMode').addEventListener('change',function(){if(this.value!=='fixed')$('taskEditDue').value='';v2SyncDueModeField();});
   $('taskAIAssist').addEventListener('click',function(e){var b=e.target.closest('[data-task-ai-action]');if(b){v2TaskAIAction(b.getAttribute('data-task-ai-action'));return;}var use=e.target.closest('[data-task-ai-apply-followup]');if(use){$('taskEditFollowUp').value=v2InputDateTime(use.getAttribute('data-task-ai-apply-followup'));toast('已填入建议跟进时间，请确认后保存');return;}var copy=e.target.closest('[data-task-ai-copy-draft]');if(copy){var draft=$('taskAIResult').innerText.replace(/^可编辑草稿（不会自动发送）\s*/,'').replace(/复制草稿\s*$/,'').trim();copyText(draft);}});
   ['quickRecordMask','taskModalMask'].forEach(function(id){$(id).addEventListener('click',function(e){if(e.target===this)v2CloseModal(id);});});
-  $('aiPreviewClose').addEventListener('click',function(){v2PendingAI=null;v2CloseModal('aiPreviewMask');});$('aiPreviewCancel').addEventListener('click',function(){v2PendingAI=null;v2CloseModal('aiPreviewMask');});$('aiPreviewContinue').addEventListener('click',function(){var pending=v2PendingAI;v2PendingAI=null;v2CloseModal('aiPreviewMask');if(pending&&pending.proceed)pending.proceed();});
+  $('aiPreviewClose').addEventListener('click',v2CancelAIConfirm);$('aiPreviewCancel').addEventListener('click',v2CancelAIConfirm);$('aiPreviewContinue').addEventListener('click',function(){var pending=v2PendingAI;v2PendingAI=null;v2CloseModal('aiPreviewMask');if(pending&&pending.proceed)pending.proceed();});
   document.addEventListener('keydown',function(e){
     if(e.key!=='Escape')return;
     var mask=v2VisibleTopModal();if(!mask)return;
     e.preventDefault();e.stopImmediatePropagation();
-    if(mask.id==='aiPreviewMask')v2PendingAI=null;
+    if(mask.id==='aiPreviewMask'){v2CancelAIConfirm();return;}
     v2CloseModal(mask.id);
   });
   $('btnAIAssistant').addEventListener('click',openAIAssistant);$('aiDrawerClose').addEventListener('click',closeAIAssistant);$('aiDrawerMask').addEventListener('click',closeAIAssistant);
