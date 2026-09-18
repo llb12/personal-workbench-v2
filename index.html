@@ -1901,6 +1901,13 @@ function prepareDataForSave(){
   data.bgCustom=data.bgCustomPath?'':(typeof data.bgCustom==='string'?data.bgCustom:'');
   data.bgCustomPath=typeof data.bgCustomPath==='string'?data.bgCustomPath:'';
 }
+function needsV3Migration(raw){
+  if(!raw||raw.schemaVersion!==3||!Array.isArray(raw.inbox)||!Array.isArray(raw.workLog))return true;
+  return Array.isArray(raw.todos)&&raw.todos.some(function(t){
+    if(!t)return false;
+    return !Object.prototype.hasOwnProperty.call(t,'title')||!Object.prototype.hasOwnProperty.call(t,'status')||!Object.prototype.hasOwnProperty.call(t,'sourceType')||!Object.prototype.hasOwnProperty.call(t,'sourceText')||!Object.prototype.hasOwnProperty.call(t,'sourceId')||!Object.prototype.hasOwnProperty.call(t,'aiMeta')||!Object.prototype.hasOwnProperty.call(t,'dueAt')||!Object.prototype.hasOwnProperty.call(t,'dueMode')||!Object.prototype.hasOwnProperty.call(t,'createdAt')||!Object.prototype.hasOwnProperty.call(t,'notificationKeys')||!Object.prototype.hasOwnProperty.call(t,'isToday');
+  });
+}
 function needsV2Migration(raw){
   if(!raw||raw.schemaVersion!==2||!Array.isArray(raw.inbox))return true;
   return Array.isArray(raw.todos)&&raw.todos.some(function(t){
