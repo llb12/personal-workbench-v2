@@ -348,7 +348,7 @@ function validateImportData(obj) {
   }
 
   const known = [
-    'todos', 'projects', 'events', 'inbox', 'note', 'kanban', 'theme', 'profile',
+    'schemaVersion', 'todos', 'projects', 'events', 'inbox', 'workLog', 'note', 'kanban', 'theme', 'profile',
     'accent', 'layout', 'noteSample', 'city', 'weather', 'geo',
     'bgPreset', 'bgCustom', 'bgCustomPath', 'bgIntensity', 'bgBlur', 'bgCardOpacity', 'bgMode', 'focusId', 'snap'
   ];
