@@ -4384,7 +4384,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function v2AIInvoke(action,extra,done){
     var ai=aiBridge();if(!ai||typeof ai.run!=='function'){done({engine:'unconfigured',code:'AI_UNAVAILABLE',message:'当前环境不支持 AI 助手'});return;}
-    if(v2AiBusy){toast('已有 AI 操作正在进行');return;}
+    if(v2AiBusy){toast('已有 AI 操作正在进行');done({engine:'busy',code:'AI_BUSY',message:'已有 AI 操作正在进行'});return;}
     ai.getConfig().then(function(config){
       v2AiConfig=config||{};
       if(!config||!config.enabled||!config.hasApiKey){done({engine:'unconfigured',code:config&&config.enabled?'AI_NOT_CONFIGURED':'AI_DISABLED',message:config&&config.enabled?'尚未配置 AI 整理':'AI 助手尚未启用'});return;}
