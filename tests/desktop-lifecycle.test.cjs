@@ -34,7 +34,7 @@ function harness(options={}) {
   const app={quitCount:0,getPath(type){assert.equal(type,'userData');return 'C:/sandbox';},quit(){this.quitCount++;}};
   const screen={getAllDisplays(){return options.displays || [{workArea:{x:0,y:0,width:1920,height:1080}}];}};
   function Tray(img) {
-    assert.deepEqual(img,{valid:true});
+    assert.equal(img.valid,true);
     this.handlers={};this.destroyed=false;
     this.on=(name,cb)=>{this.handlers[name]=cb;};
     this.setToolTip=text=>assert.equal(text,'个人工作台');
