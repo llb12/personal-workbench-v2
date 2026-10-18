@@ -13,6 +13,8 @@ on:
       - tests/p0-safety.test.cjs
       - tests/desktop-lifecycle.test.cjs
       - tests/p0-package.test.cjs
+      - tests/electron-smoke.cjs
+      - tests/run-electron-smoke.cjs
       - .github/workflows/p0-static-safety.yml
 jobs:
   check:
@@ -54,3 +56,5 @@ jobs:
         run: .\node_modules\.bin\electron-builder.cmd --win --x64 --dir --publish never
       - name: Inspect Windows package contents
         run: node tests/p0-package.test.cjs
+      - name: Exercise real Electron window using disposable CI profile
+        run: node tests/run-electron-smoke.cjs
