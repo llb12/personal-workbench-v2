@@ -4,6 +4,7 @@
 // This module takes Electron dependencies as arguments to permit isolated Node tests.
 function createDesktopLifecycle(deps) {
   const {app, screen, Tray, Menu, nativeImage, fs, path, iconPath, getWindow, onQuickCapture} = deps;
+  const platform = deps.platform || process.platform;
   const settingsFile = path.join(app.getPath('userData'), 'desktop-ui.json');
   const defaultSettings = { closeToTray: false, bounds: null };
   let settings = { ...defaultSettings };
@@ -116,7 +117,7 @@ function createDesktopLifecycle(deps) {
 
   function ensureTray() {
     if (tray) return true;
-    if (process.platform !== 'win32') return false;
+    if (platform !== 'win32') return false;
     try {
       const img = nativeImage.createFromPath(iconPath);
       if (!img || img.isEmpty()) return false;
