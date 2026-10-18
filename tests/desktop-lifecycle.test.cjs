@@ -5,7 +5,8 @@ const {createDesktopLifecycle} = require('../desktop-lifecycle');
 
 function harness(options={}) {
   const files = new Map();
-  if (options.existing) files.set('C:/sandbox/desktop-ui.json',JSON.stringify(options.existing));
+  const settingsPath=path.join('C:/sandbox','desktop-ui.json');
+  if (options.existing) files.set(settingsPath,JSON.stringify(options.existing));
   const fs = {
     existsSync:p=>files.has(p),
     readFileSync:p=>files.get(p),
@@ -68,7 +69,7 @@ function harness(options={}) {
   lifecycle.attachWindow(win);lifecycle.ensureTray();
   const set=lifecycle.setSettings({closeToTray:true});
   assert.equal(set.ok,true);assert.equal(set.closeToTray,true);
-  assert.equal(JSON.parse(h.files.get('C:/sandbox/desktop-ui.json')).closeToTray,true);
+  assert.equal(JSON.parse(h.files.get(path.join('C:/sandbox','desktop-ui.json'))).closeToTray,true);
   let prevented=false;
   events.close({preventDefault(){prevented=true;}});
   assert.equal(prevented,true);assert.equal(win.hidden,true);
@@ -97,7 +98,7 @@ function harness(options={}) {
 {
   const h=harness();h.lifecycle.attachWindow(h.win);
   h.events.close({preventDefault(){}});
-  const saved=JSON.parse(h.files.get('C:/sandbox/desktop-ui.json'));
+  const saved=JSON.parse(h.files.get(path.join('C:/sandbox','desktop-ui.json')));
   assert.deepEqual(saved.bounds,{x:100,y:80,width:1200,height:810});
   const restored=harness({existing:saved});
   assert.deepEqual(restored.lifecycle.getWindowBounds(),saved.bounds);
