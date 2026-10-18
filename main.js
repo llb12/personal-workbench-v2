@@ -295,7 +295,10 @@ if (hasSingleInstanceLock) {
   app.whenReady().then(() => {
     desktop = createDesktopLifecycle({
       app, screen, Tray, Menu, nativeImage, fs, path,
-      iconPath: path.join(__dirname, 'build', 'icon.ico'),
+      // Native tray image must be a real OS file when running from app.asar.
+      iconPath: app.isPackaged
+        ? path.join(process.resourcesPath, 'tray', 'icon.ico')
+        : path.join(__dirname, 'build', 'icon.ico'),
       getWindow: () => win
     });
     createWindow();
