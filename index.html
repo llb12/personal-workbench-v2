@@ -1037,6 +1037,11 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-upcoming-row.tbd .v2-date-label{width:63px;color:var(--warn)}
 .dw-unit{color:var(--muted);font-size:11px;margin-left:-6px}
 #aiConfigStatus[data-kind="ok"]{color:var(--ok)}#aiConfigStatus[data-kind="error"]{color:var(--danger)}
+/* P0-1: reusable app-native prompt with inline validation */
+.v2-prompt-modal{max-width:480px}
+.v2-prompt-field{display:flex;flex-direction:column;gap:8px;margin:16px 0 6px;color:var(--text);font-size:13px}
+.v2-prompt-field .inp{width:100%;min-height:38px}
+.v2-prompt-error{min-height:18px;color:var(--danger);font-size:12px;line-height:1.5}
 </style>
 
 </head>
@@ -1445,6 +1450,16 @@ body:not(.v2-view) #v2Panel{display:none!important}
     <p class="v2-modal-help">当前隐私设置要求逐次确认。以下仅展示将发送的上下文范围；取消不会影响原始记录和任务。</p>
     <div class="ai-preview-list" id="aiPreviewBody"></div>
     <div class="v2-modal-foot"><span id="aiPreviewHint">AI 只返回建议，不会自动修改数据</span><div><button class="btn-ghost" id="aiPreviewCancel" type="button">取消</button><button class="btn-primary" id="aiPreviewContinue" type="button">确认发送</button></div></div>
+  </div>
+</div>
+
+<!-- P0-1: Electron-safe prompt -->
+<div class="v2-modal-mask" id="promptModalMask" aria-hidden="true">
+  <div class="v2-modal v2-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle" aria-describedby="promptModalError" tabindex="-1">
+    <div class="v2-modal-head"><div><h3 id="promptModalTitle">请输入</h3></div><button class="v2-close" id="promptModalClose" type="button" aria-label="关闭">×</button></div>
+    <label class="v2-prompt-field" for="promptModalInput"><span id="promptModalLabel">内容</span><input class="inp" id="promptModalInput" type="text" autocomplete="off"></label>
+    <p class="v2-prompt-error" id="promptModalError" aria-live="polite"></p>
+    <div class="v2-modal-foot"><span>取消不会修改任何内容</span><div><button class="btn-ghost" id="promptModalCancel" type="button">取消</button><button class="btn-primary" id="promptModalConfirm" type="button">确定</button></div></div>
   </div>
 </div>
 
@@ -4107,7 +4122,16 @@ $('corePanel').addEventListener('click',function(e){
   else if(action==='down'&&t){coreMoveTask(id,1);return;}
   else if(action==='block'&&t){
     if(t.blocked){t.blocked=false;t.blocker='';}
-    else{var reason=prompt('请填写卡点（可留空）：',t.blocker||'');if(reason===null)return;t.blocked=true;t.blocker=reason.trim();}
+    else{
+      if(typeof window.v2PromptModal!=='function'){toast('输入窗口尚未准备好');return;}
+      window.v2PromptModal({title:'记录卡点',label:'请填写卡点（可留空）',type:'text',defaultValue:t.blocker||''}).then(function(reason){
+        if(reason===null)return;
+        var current=todoById(id);if(!current)return;
+        current.blocked=true;current.blocker=reason.trim();
+        rerenderAll();renderCore();save();
+      });
+      return;
+    }
   }else if(action==='add-project'){
     var input=$('coreNewProject');if(input&&addProject(input.value,false,null)){input.value='';renderCore();}
     return;
@@ -5380,12 +5404,75 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     else if(act==='wake'){t.snoozedUntil=null;t.updatedAt=v2Now();v2RemoveReminder(id);save(true);v2CheckReminders();v2Render();toast('已唤醒提醒');}
   }
   function v2Snooze(id,until){var t=todoById(id);if(!t)return;t.snoozedUntil=until;t.updatedAt=v2Now();v2RemoveReminder(id);save(true);v2Render();toast('已稍后提醒：'+v2DateTimeText(until));}
+  function v2DefaultSnoozeInput(){
+    var now=new Date(),target=new Date(now);
+    target.setHours(18,0,0,0);
+    if(target.getTime()<=now.getTime()){
+      target.setDate(target.getDate()+1);
+      target.setHours(9,0,0,0);
+    }
+    return fmt(target)+'T'+pad(target.getHours())+':'+pad(target.getMinutes());
+  }
   function v2CustomSnooze(id){
-    var raw=window.prompt('输入提醒时间（例如 2026-08-27 18:00）：','');if(raw===null)return;
-    raw=String(raw).trim().replace(' ','T');var d=v2ParseDate(raw);if(!d){toast('时间格式无法识别');return;}v2Snooze(id,d.toISOString());
+    v2PromptModal({
+      title:'自定义稍后提醒',
+      label:'提醒时间',
+      type:'datetime-local',
+      defaultValue:v2DefaultSnoozeInput(),
+      validate:function(value){
+        var d=v2ParseDate(value);
+        return !d||d.getTime()<=Date.now()?'请选择晚于当前时间的提醒时间':'';
+      }
+    }).then(function(value){
+      if(value===null)return;
+      var task=todoById(id),d=v2ParseDate(value);
+      if(task&&d&&d.getTime()>Date.now())v2Snooze(id,d.toISOString());
+    });
   }
 
-  var V2_MODAL_IDS=['quickRecordMask','taskModalMask','aiPreviewMask'];
+  var V2_MODAL_IDS=['quickRecordMask','taskModalMask','aiPreviewMask','promptModalMask'];
+  var v2ActivePrompt=null;
+  function v2FinishPrompt(value){
+    if(!v2ActivePrompt)return;
+    var current=v2ActivePrompt;
+    v2ActivePrompt=null;
+    v2CloseModal('promptModalMask');
+    current.resolve(value);
+  }
+  function v2ConfirmPrompt(){
+    if(!v2ActivePrompt)return;
+    var value=$('promptModalInput').value;
+    var error='';
+    if(typeof v2ActivePrompt.validate==='function'){
+      try{error=v2ActivePrompt.validate(value)||'';}
+      catch(_){error='输入校验失败，请检查内容';}
+    }
+    if(error){
+      $('promptModalError').textContent=String(error===true?'请检查输入内容':error);
+      $('promptModalInput').setAttribute('aria-invalid','true');
+      $('promptModalInput').focus();
+      return;
+    }
+    v2FinishPrompt(value);
+  }
+  function v2PromptModal(options){
+    var opts=options||{};
+    if(v2ActivePrompt)return Promise.resolve(null);
+    var input=$('promptModalInput');
+    $('promptModalTitle').textContent=String(opts.title||'请输入');
+    $('promptModalLabel').textContent=String(opts.label||'内容');
+    input.type=opts.type==='datetime-local'?'datetime-local':'text';
+    input.value=String(opts.defaultValue==null?'':opts.defaultValue);
+    input.placeholder=String(opts.placeholder||'');
+    input.removeAttribute('aria-invalid');
+    $('promptModalError').textContent='';
+    return new Promise(function(resolve){
+      v2ActivePrompt={resolve:resolve,validate:opts.validate};
+      v2ShowModal('promptModalMask');
+      setTimeout(function(){if(v2ActivePrompt){input.focus();if(input.type==='text')input.select();}},30);
+    });
+  }
+  window.v2PromptModal=v2PromptModal;
   function v2VisibleTopModal(){
     for(var i=V2_MODAL_IDS.length-1;i>=0;i--){
       var mask=$(V2_MODAL_IDS[i]);
@@ -5696,8 +5783,15 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var mask=v2VisibleTopModal();if(!mask)return;
     e.preventDefault();e.stopImmediatePropagation();
     if(mask.id==='aiPreviewMask'){v2CancelAIConfirm();return;}
+    if(mask.id==='promptModalMask'){v2FinishPrompt(null);return;}
     v2CloseModal(mask.id);
   });
+  $('promptModalClose').addEventListener('click',function(){v2FinishPrompt(null);});
+  $('promptModalCancel').addEventListener('click',function(){v2FinishPrompt(null);});
+  $('promptModalConfirm').addEventListener('click',v2ConfirmPrompt);
+  $('promptModalMask').addEventListener('click',function(e){if(e.target===this)v2FinishPrompt(null);});
+  $('promptModalInput').addEventListener('input',function(){this.removeAttribute('aria-invalid');$('promptModalError').textContent='';});
+  $('promptModalInput').addEventListener('keydown',function(e){if(v2EnterSubmitAllowed(e)){e.preventDefault();v2ConfirmPrompt();}});
   $('btnAIAssistant').addEventListener('click',openAIAssistant);$('aiDrawerClose').addEventListener('click',closeAIAssistant);$('aiDrawerMask').addEventListener('click',closeAIAssistant);
   $('aiDrawerPlan').addEventListener('click',v2RequestPlanToday);$('aiDrawerInbox').addEventListener('click',runInboxAIFromAssistant);$('aiDrawerAsk').addEventListener('click',function(){v2RequestWorkspaceAnswer($('aiDrawerQuery').value);});$('aiDrawerQuery').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();v2RequestWorkspaceAnswer(this.value);}});$('aiDrawerDay').addEventListener('click',v2RequestDaySummary);$('aiDrawerWeek').addEventListener('click',v2RequestWeekSummary);
   $('aiDrawer').addEventListener('click',function(e){
