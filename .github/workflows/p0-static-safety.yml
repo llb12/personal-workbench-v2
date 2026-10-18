@@ -14,6 +14,7 @@ on:
       - tests/desktop-lifecycle.test.cjs
       - tests/p0-package.test.cjs
       - tests/p0-installers.test.cjs
+      - tests/p0-packaged-portable.test.cjs
       - tests/electron-smoke.cjs
       - tests/run-electron-smoke.cjs
       - scripts/local-preflight.cjs
@@ -79,3 +80,5 @@ jobs:
         run: .\node_modules\.bin\electron-builder.cmd --win --x64 --publish never
       - name: Verify installer and portable binaries
         run: node tests/p0-installers.test.cjs
+      - name: Launch built portable executable with disposable Windows profile
+        run: node tests/p0-packaged-portable.test.cjs
