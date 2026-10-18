@@ -1,10 +1,11 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage, Tray, Menu, nativeImage, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { analyzeInboxWithAI, testAIConnection, runAIAction } = require('./ai-adapter');
+const { createDesktopLifecycle } = require('./desktop-lifecycle');
 
 // 普通运行使用独立的优化版目录；显式 --user-data-dir 供便携/干净用户测试隔离数据。
 const defaultUserDataPath = app.getPath('userData');
@@ -253,6 +254,7 @@ function writeData(data) {
 }
 
 let win = null;
+let desktop = null;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -260,11 +262,14 @@ function createWindow() {
     height: 920,
     minWidth: 520,
     minHeight: 440,
+    ...(desktop ? desktop.getWindowBounds() : {}),
     backgroundColor: '#eef1f5',
     transparent: false,
     autoHideMenuBar: true,
     title: '个人工作台',
     webPreferences: {
+      // Keep reminder timers active while an opted-in user hides the window to the tray.
+      backgroundThrottling: false,
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
@@ -275,6 +280,7 @@ function createWindow() {
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, 'index.html'));
 
+  if (desktop) desktop.attachWindow(win);
   win.on('closed', () => { win = null; });
 }
 
@@ -287,7 +293,13 @@ if (hasSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    desktop = createDesktopLifecycle({
+      app, screen, Tray, Menu, nativeImage, fs, path,
+      iconPath: path.join(__dirname, 'build', 'icon.ico'),
+      getWindow: () => win
+    });
     createWindow();
+    desktop.ensureTray();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -297,8 +309,14 @@ if (hasSingleInstanceLock) {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+app.on('before-quit', () => { if (desktop) desktop.beforeQuit(); });
 
 // ---- IPC ----
+// Desktop UI settings are intentionally separate from data.json and AI key storage.
+ipcMain.handle('desktop-get-settings', () =>
+  desktop ? desktop.getSettings() : { closeToTray:false, trayAvailable:false });
+ipcMain.handle('desktop-set-settings', (_event, input) =>
+  desktop ? desktop.setSettings(input) : {ok:false,error:'桌面窗口尚未就绪'});
 ipcMain.handle('load-data', () => readData());
 
 ipcMain.handle('save-data', (_evt, data) => writeData(data));
