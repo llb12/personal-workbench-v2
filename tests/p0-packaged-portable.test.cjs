@@ -60,9 +60,10 @@ async function main(){
   assert.ok(fs.existsSync(exe),'Built portable binary missing');
   const profile=fs.mkdtempSync(path.join(runner,'wb-packaged-'));
   const port=await freePort();
+  const launchEnv={...process.env};
+  delete launchEnv.ELECTRON_RUN_AS_NODE; // Must launch the real graphical Electron app.
   const child=spawn(exe,['--user-data-dir='+profile,'--remote-debugging-port='+port,'--disable-gpu'],{
-    cwd:runner,windowsHide:true,stdio:'ignore',
-    env:{...process.env,ELECTRON_RUN_AS_NODE:''}
+    cwd:runner,windowsHide:true,stdio:'ignore',env:launchEnv
   });
   let session=null;
   try{
