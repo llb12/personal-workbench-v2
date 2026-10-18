@@ -24,7 +24,6 @@
       "index.html",
       "main.js",
       "desktop-lifecycle.js",
-      "build/icon.ico",
       "preload.js",
       "ai-adapter.js",
       "package.json"
@@ -32,6 +31,12 @@
     "directories": {
       "output": "release"
     },
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "tray/icon.ico"
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
