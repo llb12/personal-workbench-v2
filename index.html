@@ -3438,12 +3438,38 @@ document.addEventListener('keydown',function(e){
   if(next<0||next>=nodes.length){e.preventDefault();nodes[(next+nodes.length)%nodes.length].focus();}
 },true);
 
-/* ===== 快捷键 ===== */
+/* P0-3: central shortcuts, no hidden legacy input targets. */
+var WB_SHORTCUT_PAGES=['home','inbox','tasks','projects','calendar','records'];
 document.addEventListener('keydown',function(e){
-  if(!e.ctrlKey&&!e.metaKey)return;
-  var map={1:'todoText',2:'evText',3:'note'};var k=String(e.key).toLowerCase();
-  if(k==='4'){e.preventDefault();var i=$('todoText');if(i)i.focus();return;}
-  if(map[k]){e.preventDefault();var el=$(map[k]);if(el)el.focus();}
+  if(e.isComposing===true||e.keyCode===229||e.which===229)return;
+  var key=String(e.key||'').toLowerCase();
+  var modifier=(e.ctrlKey||e.metaKey)&&!e.altKey;
+  if(modifier){
+    if(!e.shiftKey&&key==='k'){
+      e.preventDefault();
+      if(!$('cmdkMask').classList.contains('show'))cmdkOpenFn();
+      return;
+    }
+    if(!e.shiftKey&&/^[1-6]$/.test(key)){
+      e.preventDefault();var target=WB_SHORTCUT_PAGES[Number(key)-1];
+      if(typeof window.v2Navigate==='function')window.v2Navigate(target);
+      else switchView(target);
+      return;
+    }
+    if(key==='n'){
+      e.preventDefault();
+      if(e.shiftKey){if(window.v2OpenQuickRecord)window.v2OpenQuickRecord();}
+      else if(window.v2OpenNewTask)window.v2OpenNewTask();
+      return;
+    }
+    return;
+  }
+  if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||key!=='/')return;
+  var node=e.target;
+  if(node&&((node.isContentEditable)||/^(INPUT|TEXTAREA|SELECT)$/i.test(node.tagName||'')||(node.closest&&node.closest('[contenteditable="true"]'))))return;
+  if(wbOverlayStack.length)return;
+  var search=$('v2TaskSearch');
+  if(search&&search.getClientRects().length){e.preventDefault();search.focus();}
 });
 
 /* ===== 模块展开全屏 ===== */
@@ -4077,6 +4103,7 @@ function cmdkBuild(q){
   items.push({t:'动作',n:'切换深色 / 浅色',run:function(){setTheme(data.theme==='dark'?'light':'dark');}});
   items.push({t:'动作',n:'导出备份',run:function(){$('btnExport').click();}});
   items.push({t:'动作',n:'打开设置',run:function(){openDrawer();}});
+  items.push({t:'帮助',n:'快捷键一览',run:function(){wbConfirmModal({title:'快捷键一览',message:'Ctrl+K：命令面板\nCtrl+1～6：首页 / 收件箱 / 任务 / 项目 / 日历 / 工作记录\nCtrl+N：新建任务\nCtrl+Shift+N：快速记录\n/：聚焦任务搜索\nEsc：关闭最上层弹窗',notice:true});}});
   items.push({t:'AI',n:'问问工作台',run:function(){if(window.openAIAssistant)window.openAIAssistant();setTimeout(function(){var q=$('aiDrawerQuery');if(q)q.focus();},60);}});
   items.push({t:'动作',n:'布局编辑',run:function(){enterLayout(!document.body.classList.contains('editing'));}});
   items.push({t:'动作',n:'导入薪酬节点模板',run:function(){var b=$('btnPayTemplate');if(b)b.click();}});
@@ -4129,9 +4156,6 @@ $('cmdkInput').addEventListener('keydown',function(e){
 $('cmdkList').addEventListener('click',function(e){var b=e.target.closest('.cmdk-item');if(b)cmdkRun(+b.getAttribute('data-i'));});
 $('cmdkMask').addEventListener('click',function(e){if(e.target===this)cmdkClose();});
 var bCk=document.getElementById('btnCmdk');if(bCk)bCk.addEventListener('click',cmdkOpenFn);
-document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){e.preventDefault();cmdkOpenFn();return;}
-});
 
 /* ===== 薪酬节点一键模板 ===== */
 var bPT=document.getElementById('btnPayTemplate');
@@ -5834,6 +5858,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     $('taskEditHint').textContent=t?'修改会自动保存':'明确知道要做什么时，在这里直接新建任务';
     v2SyncDueModeField();v2ShowModal('taskModalMask');
   }
+  window.v2OpenNewTask=function(){v2OpenTaskModal(null,false);};
   function v2SaveTaskModal(){
     var title=$('taskEditTitle').value.trim();if(!title){toast('任务名称不能为空');return;}
     var t=todoById(v2EditingTaskId),isNew=!t,stamp=v2Now();
@@ -6058,7 +6083,9 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     v2BoardDragId=null;if(id)v2TaskBoardAction(id,col.getAttribute('data-col')==='done'?'done':'restore');
   });
 
-  $('btnQuickRecord').addEventListener('click',function(){$('quickRecordText').value='';v2ShowModal('quickRecordMask');});
+  function v2OpenQuickRecord(){$('quickRecordText').value='';v2ShowModal('quickRecordMask');}
+  window.v2OpenQuickRecord=v2OpenQuickRecord;
+  $('btnQuickRecord').addEventListener('click',v2OpenQuickRecord);
   $('quickRecordClose').addEventListener('click',function(){v2CloseModal('quickRecordMask');});$('quickRecordCancel').addEventListener('click',function(){v2CloseModal('quickRecordMask');});
   $('quickRecordSave').addEventListener('click',function(){if(v2AddQuickInbox($('quickRecordText').value))$('quickRecordText').value='';});$('quickRecordText').addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('quickRecordSave').click();});
   $('quickRecordAI').addEventListener('click',function(){if(v2AddQuickInboxAI($('quickRecordText').value))$('quickRecordText').value='';});
