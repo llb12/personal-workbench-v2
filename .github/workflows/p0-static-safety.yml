@@ -16,6 +16,7 @@ on:
       - tests/p0-installers.test.cjs
       - tests/p0-packaged-portable.test.cjs
       - tests/p0-installed-nsis.test.cjs
+      - scripts/create-candidate-bundle.cjs
       - tests/electron-smoke.cjs
       - tests/run-electron-smoke.cjs
       - scripts/local-preflight.cjs
@@ -87,3 +88,20 @@ jobs:
         run: node tests/p0-packaged-portable.test.cjs portable
       - name: Install NSIS into disposable runner and smoke installed executable
         run: node tests/p0-installed-nsis.test.cjs
+      - name: Create test-only candidate checksums and handoff
+        if: github.event_name == 'push'
+        run: node scripts/create-candidate-bundle.cjs
+      - name: Retain test candidates for independent review (not a release)
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: P0_Test_Only_${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            release/Personal_Workbench_Setup_*.exe
+            release/Personal_Workbench_Portable_*.exe
+            release/CANDIDATE_README.txt
+            release/SHA256SUMS.txt
+            release/candidate_manifest.json
