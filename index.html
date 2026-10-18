@@ -2458,8 +2458,8 @@ $('todoList').addEventListener('click',function(e){
       if(becomingDone)toast('已完成',{undo:function(){t.done=false;t.doneAt=null;rerenderAll();save();}});
     }
     else if(act==='del'){
-      var removed=t;data.todos.splice(i,1);
-      toast('已删除',{undo:function(){data.todos.splice(Math.min(i,data.todos.length),0,removed);rerenderAll();save();}});
+      if(typeof window.wbDeleteTaskSafely!=='function'){toast('删除保护尚未就绪，请重新打开工作台');return;}
+      window.wbDeleteTaskSafely(t.id);return;
     }
     else if(act==='block'){t.blocked=!t.blocked;if(!t.blocked)t.blocker='';}
     else if(act==='focus'){data.focusId=(data.focusId===t.id)?null:t.id;}
@@ -2901,7 +2901,10 @@ $('evList').addEventListener('click',function(e){
   if(tb){
     var tid=tb.getAttribute('data-todoid'),tact=tb.getAttribute('data-act'),t=todoById(tid);if(!t)return;
     if(tact==='toggle'){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;}
-    else if(tact==='del'){data.todos=data.todos.filter(function(x){return x.id!==tid;});}
+    else if(tact==='del'){
+      if(typeof window.wbDeleteTaskSafely!=='function'){toast('删除保护尚未就绪，请重新打开工作台');return;}
+      window.wbDeleteTaskSafely(tid);return;
+    }
     renderTodos();renderKanban();renderCal();renderOverview();save();return;
   }
   var b=e.target.closest('button[data-src]');if(!b)return;
@@ -3137,7 +3140,10 @@ kb.addEventListener('click',function(e){
   else if(act==='restore'){var od=t.done,oda=t.doneAt;t.done=false;t.doneAt=null;toast('已恢复为待办',{undo:function(){t.done=od;t.doneAt=oda;rerenderAll();save();}});}
   else if(act==='defer'){var od=t.due,odf=t.defer,odl=t.lastDefer;t.due=fmt(addDays(today0(),1));t.defer=(t.defer||0)+1;t.lastDefer=fmt(today0());toast('已顺延到明天'+(t.defer>1?'（第 '+t.defer+' 次）':''),{undo:function(){t.due=od;t.defer=odf;t.lastDefer=odl;rerenderAll();save();}});}
   else if(act==='block'){var ob=t.blocked,obr=t.blocker;t.blocked=!t.blocked;if(!t.blocked)t.blocker='';toast(t.blocked?'已标记卡住':'已取消卡住',{undo:function(){t.blocked=ob;t.blocker=obr;rerenderAll();save();}});}
-  else if(act==='del'){var idx=data.todos.indexOf(t);data.todos=data.todos.filter(function(x){return x.id!==id;});toast('已删除',{undo:function(){data.todos.splice(Math.min(idx,data.todos.length),0,t);rerenderAll();save();}});}
+  else if(act==='del'){
+    if(typeof window.wbDeleteTaskSafely!=='function'){toast('删除保护尚未就绪，请重新打开工作台');return;}
+    window.wbDeleteTaskSafely(id);return;
+  }
   else return;
   renderTodos();renderKanban();renderAlert();renderReview();save();
 });
@@ -5402,7 +5408,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     return true;
   }
   function v2RefreshAfterDelete(){
-    renderBadges();renderTodos();renderKanban();renderAlert();renderReview();save();v2Render();
+    renderBadges();renderTodos();renderKanban();renderCal();renderOverview();renderAlert();renderReview();renderDoneList();save();v2Render();
   }
   function v2DeleteTaskWithLog(t,id){
     if(!t)return false;
@@ -5431,6 +5437,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     }});
     return true;
   }
+  // One guarded deletion entry point shared by V2 and legacy list/calendar/kanban.
+  window.wbDeleteTaskSafely=function(id){
+    if(!dataReady())return false;
+    var task=todoById(id);
+    return task?v2DeleteTaskWithLog(task,id):false;
+  };
   function v2TaskBoardAction(id,act){
     var t=todoById(id);if(!t)return;
     if(act==='done')v2CompleteTask(t,true);
