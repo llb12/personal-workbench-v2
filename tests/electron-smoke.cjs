@@ -137,6 +137,28 @@ async function run(){
   const result=await win.webContents.executeJavaScript('('+smokeRenderer.toString()+')()',true);
   console.log('P0_ELECTRON_GUI_CHECKS: '+JSON.stringify(result));
   if(scenario==='import'){
+    // Confirm cancellations and simultaneous in-place edits never overwrite the live data.
+    const guardChecks=await win.webContents.executeJavaScript(`(async function(){
+      const untouched=JSON.stringify(data);
+      const candidate={schemaVersion:3,todos:[{id:'should-never-import',text:'Blocked'}],projects:[],events:{},note:'blocked'};
+      applyImported(candidate);
+      document.getElementById('wbConfirmCancel').click();
+      await Promise.resolve();
+      if(JSON.stringify(data)!==untouched)throw new Error('Canceled import modified data');
+      applyImported(candidate);
+      const oldNote=data.note;
+      data.note='EDIT_WHILE_CONFIRMING';
+      document.getElementById('wbConfirmAccept').click();
+      await new Promise(resolve=>setTimeout(resolve,0));
+      if(data.todos.some(x=>x.id==='should-never-import'))throw new Error('Concurrent edit allowed import overwrite');
+      if(!document.getElementById('wbConfirmMask').classList.contains('show'))throw new Error('Missing concurrent edit warning');
+      if(!document.getElementById('wbConfirmMessage').textContent.includes('发生变化'))throw new Error('Missing edit warning text');
+      document.getElementById('wbConfirmAccept').click();
+      data.note=oldNote;
+      return JSON.stringify(data)===untouched;
+    })()`,true);
+    assert.equal(guardChecks,true,'Import confirmation concurrency guard did not preserve contents');
+    console.log('P0_ELECTRON_IMPORT_GUARD_PASS: cancellation and in-place edit protection');
     await win.webContents.executeJavaScript("document.getElementById('btnImport').click();true",true);
     await pollUntil(()=>win.webContents.executeJavaScript("document.getElementById('wbConfirmMask').classList.contains('show')",true),'import confirm');
     const confirmed=await win.webContents.executeJavaScript("(function(){return document.getElementById('wbConfirmMessage').textContent.includes('覆盖当前全部数据')})()",true);
