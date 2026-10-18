@@ -6,7 +6,7 @@ const path=require('node:path');
 const {app, BrowserWindow}=require('electron');
 const profile=process.env.WB_ELECTRON_SMOKE_PROFILE;
 const scenario=process.env.WB_ELECTRON_SMOKE_CASE||'normal';
-assert.ok(['normal','legacy','corrupt'].includes(scenario));
+assert.ok(['normal','legacy','corrupt','import'].includes(scenario));
 assert.equal(process.platform,'win32');
 assert.equal(process.env.CI,'true');
 assert.ok(profile&&process.env.RUNNER_TEMP,'CI-only profile missing');
@@ -29,6 +29,12 @@ function finish(error){
 app.on('browser-window-created',(_event,win)=>{
   win.webContents.on('render-process-gone',(_ev,details)=>finish(new Error('Renderer crashed: '+JSON.stringify(details))));
 });
+if(scenario==='import'){
+  const {dialog}=require('electron');
+  const source=path.join(profile,'import-source.json');
+  assert.ok(fs.existsSync(source),'Import source missing');
+  dialog.showOpenDialog=async()=>({canceled:false,filePaths:[source]});
+}
 require('../main.js');
 async function pollUntil(fn,label,timeout=13000){
   const start=Date.now();
@@ -130,6 +136,30 @@ async function run(){
   }
   const result=await win.webContents.executeJavaScript('('+smokeRenderer.toString()+')()',true);
   console.log('P0_ELECTRON_GUI_CHECKS: '+JSON.stringify(result));
+  if(scenario==='import'){
+    await win.webContents.executeJavaScript("document.getElementById('btnImport').click();true",true);
+    await pollUntil(()=>win.webContents.executeJavaScript("document.getElementById('wbConfirmMask').classList.contains('show')",true),'import confirm');
+    const confirmed=await win.webContents.executeJavaScript("(function(){return document.getElementById('wbConfirmMessage').textContent.includes('覆盖当前全部数据')})()",true);
+    assert.equal(confirmed,true,'Import confirmation text missing');
+    await win.webContents.executeJavaScript("document.getElementById('wbConfirmAccept').click();true",true);
+    await pollUntil(async()=>{
+      const disk=path.join(profile,'data.json');
+      try{
+        const persisted=JSON.parse(fs.readFileSync(disk,'utf8'));
+        return persisted.todos.some(t=>t.id==='imported-task');
+      }catch(_){return false;}
+    },'import persistence');
+    const current=await win.webContents.executeJavaScript("(function(){return {taskIds:data.todos.map(x=>x.id),note:data.note}})()",true);
+    assert.ok(current.taskIds.includes('imported-task'),'Imported task not displayed');
+    assert.equal(current.note,'导入便签');
+    console.log('P0_ELECTRON_IMPORT_UI_PASS: confirmation, IPC import and saved replacement');
+    win.webContents.reload();
+    await pollUntil(async()=>{
+      if(win.webContents.isLoading())return false;
+      return win.webContents.executeJavaScript("typeof data!=='undefined' && loaded && data.todos.some(t=>t.id==='imported-task')",true);
+    },'post-import renderer reload');
+    console.log('P0_ELECTRON_IMPORT_RELOAD_PASS: imported data survives renderer reload');
+  }
   if(result.trayAvailable){
     win.close();
     assert.equal(win.isDestroyed(),false,'Opted-in close should hide instead of exit');
@@ -140,7 +170,7 @@ async function run(){
     await win.webContents.executeJavaScript("document.getElementById('quickRecordCancel').click()");
   }
   const stored=JSON.parse(fs.readFileSync(path.join(profile,'data.json'),'utf8'));
-  assert.ok(stored.todos.some(t=>t.text==='CI Desktop Task'||t.title==='CI Desktop Task'));
+  assert.ok(stored.todos.some(t=>scenario==='import'?t.id==='imported-task':(t.text==='CI Desktop Task'||t.title==='CI Desktop Task')));
   finish(null);
 }
 run().catch(finish);
