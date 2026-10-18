@@ -6,11 +6,20 @@ on:
   pull_request:
     paths:
       - index.html
+      - main.js
+      - preload.js
+      - desktop-lifecycle.js
+      - package.json
       - tests/p0-safety.test.cjs
+      - tests/desktop-lifecycle.test.cjs
       - .github/workflows/p0-static-safety.yml
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
@@ -19,4 +28,9 @@ jobs:
         with:
           node-version: '22'
       - name: Run static and isolated interaction checks
-        run: node tests/p0-safety.test.cjs
+        run: |
+          node --check main.js
+          node --check preload.js
+          node --check desktop-lifecycle.js
+          node tests/p0-safety.test.cjs
+          node tests/desktop-lifecycle.test.cjs
