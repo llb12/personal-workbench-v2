@@ -3329,6 +3329,7 @@ function applyImported(obj){
   var invalid=validateBrowserImport(obj);
   if(invalid){wbErrorModal('导入失败',invalid+'\n原有数据未改动。');return;}
   var previous=data;
+  var beforeConfirmSnapshot=JSON.stringify(data);
   var currentCount='当前：'+data.todos.length+' 项任务、'+data.projects.length+' 个项目、'+wbCountEvents(data.events)+' 条日程';
   var incomingCount='导入：'+(obj.todos||[]).length+' 项任务、'+(obj.projects||[]).length+' 个项目、'+wbCountEvents(obj.events)+' 条日程';
   wbConfirmModal({
@@ -3337,7 +3338,10 @@ function applyImported(obj){
     confirmText:'覆盖并导入',danger:true
   }).then(function(ok){
     if(!ok)return;
-    if(data!==previous){wbErrorModal('导入已取消','当前数据在确认期间发生变化，请重新选择备份文件。');return;}
+    if(data!==previous||JSON.stringify(data)!==beforeConfirmSnapshot){
+      wbErrorModal('导入已取消','当前数据在确认期间发生变化，请先保存现有内容，再重新选择备份文件。');
+      return;
+    }
     data=normalize(obj);applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();autoDefer();renderCore();
     save(true).then(function(result){
       if(result&&result.ok){toast('导入成功，数据已恢复');if(window.v2Render)window.v2Render();return;}
