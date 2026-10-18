@@ -313,6 +313,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 app.on('before-quit', () => { if (desktop) desktop.beforeQuit(); });
+app.on('will-quit', () => { if (desktop) desktop.willQuit(); });
 
 // ---- IPC ----
 // Desktop UI settings are intentionally separate from data.json and AI key storage.
