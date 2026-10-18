@@ -84,6 +84,38 @@ async function smokeRenderer(){
   check(data.todos.some(t=>t.text==='CI Desktop Task'||t.title==='CI Desktop Task'),'new task missing');
   check(!document.getElementById('taskModalMask').classList.contains('show'),'task modal not closed');
 
+  // Click legacy UI buttons, not just the shared helper. They must leave one delete
+  // audit entry, then Undo must restore that task and remove only this audit entry.
+  for(const [hostId,attr] of [
+    ['todoList','data-i'],
+    ['kb','data-id'],
+    ['evList','data-todoid']
+  ]){
+    const host=document.getElementById(hostId);
+    check(!!host,'legacy delete test host missing: '+hostId);
+    const id='ci-legacy-delete-'+hostId;
+    const task={id:id,text:id,title:id,done:false,status:'todo',pri:'mid'};
+    data.todos.push(task);
+    const index=data.todos.length-1;
+    const before=(data.workLog||[]).filter(x=>x.taskId===id&&x.type==='delete').length;
+    const button=document.createElement('button');
+    button.setAttribute('data-act','del');
+    button.setAttribute(attr,attr==='data-i'?String(index):id);
+    host.appendChild(button);
+    button.click();
+    check(!data.todos.some(x=>x.id===id),'legacy '+hostId+' did not delete');
+    const after=(data.workLog||[]).filter(x=>x.taskId===id&&x.type==='delete').length;
+    check(after===before+1,'legacy '+hostId+' missing delete work log');
+    const undo=document.querySelector('#toast .toast-undo');
+    check(!!undo,'legacy '+hostId+' missing Undo action');
+    undo.click();
+    check(data.todos.some(x=>x.id===id),'legacy '+hostId+' failed to restore task');
+    check((data.workLog||[]).filter(x=>x.taskId===id&&x.type==='delete').length===before,
+      'legacy '+hostId+' failed to remove only corresponding delete log');
+    data.todos.splice(data.todos.findIndex(x=>x.id===id),1); // ephemeral CI test-fixture cleanup
+  }
+  console.log('P0_LEGACY_DELETE_UI_PASS: todo list, kanban and calendar use audited scoped Undo');
+
   const desktop=window.workbench.desktop;
   const cfg=await desktop.getSettings();
   check(typeof cfg.trayAvailable==='boolean','desktop preload IPC missing');
