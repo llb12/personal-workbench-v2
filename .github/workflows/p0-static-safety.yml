@@ -59,6 +59,14 @@ jobs:
         run: node tests/p0-package.test.cjs
       - name: Exercise real Electron window using disposable CI profile
         run: node tests/run-electron-smoke.cjs
+      - name: Test v2 data migration and persistence in isolated Electron
+        env:
+          WB_ELECTRON_SMOKE_CASE: legacy
+        run: node tests/run-electron-smoke.cjs
+      - name: Test corrupt data read-only protection in isolated Electron
+        env:
+          WB_ELECTRON_SMOKE_CASE: corrupt
+        run: node tests/run-electron-smoke.cjs
       - name: Build unsigned NSIS and portable candidates (no publish)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
