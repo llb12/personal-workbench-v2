@@ -6,10 +6,12 @@ const crypto=require('node:crypto');
 const pkg=require('../package.json');
 const directory=path.join(__dirname,'..','release');
 const exes=fs.readdirSync(directory).filter(name=>name.endsWith('.exe')).sort();
-const setup=exes.find(name=>name.includes('Setup')&&name.includes(pkg.version));
-const portable=exes.find(name=>!name.includes('Setup')&&name.includes(pkg.version));
-assert.ok(setup,'NSIS installer missing: '+exes.join(', '));
-assert.ok(portable,'Portable executable missing: '+exes.join(', '));
+const setup='Personal_Workbench_Setup_'+pkg.version+'.exe';
+const portable='Personal_Workbench_Portable_'+pkg.version+'.exe';
+assert.ok(exes.includes(setup),'ASCII NSIS installer missing: '+exes.join(', '));
+assert.ok(exes.includes(portable),'ASCII portable executable missing: '+exes.join(', '));
+assert.deepEqual(exes,[portable,setup].sort(),'Unexpected Windows executable artifact or non-ASCII name');
+assert.ok(exes.every(x=>/^[A-Za-z0-9_.-]+$/.test(x)),'Windows filenames must be ASCII-safe');
 for(const name of [setup,portable]){
   const file=path.join(directory,name);
   const stat=fs.statSync(file);
