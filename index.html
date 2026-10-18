@@ -1042,6 +1042,10 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-prompt-field{display:flex;flex-direction:column;gap:8px;margin:16px 0 6px;color:var(--text);font-size:13px}
 .v2-prompt-field .inp{width:100%;min-height:38px}
 .v2-prompt-error{min-height:18px;color:var(--danger);font-size:12px;line-height:1.5}
+/* P0-2A: app-native destructive-action confirmation */
+.wb-confirm-modal{max-width:470px}
+.wb-confirm-message{padding:13px 0 18px;white-space:pre-line;line-height:1.6;color:var(--text);font-size:13px}
+.wb-confirm-danger{background:var(--danger)!important;color:white!important;border-color:var(--danger)!important}
 </style>
 
 </head>
@@ -1460,6 +1464,15 @@ body:not(.v2-view) #v2Panel{display:none!important}
     <label class="v2-prompt-field" for="promptModalInput"><span id="promptModalLabel">内容</span><input class="inp" id="promptModalInput" type="text" autocomplete="off"></label>
     <p class="v2-prompt-error" id="promptModalError" aria-live="polite"></p>
     <div class="v2-modal-foot"><span>取消不会修改任何内容</span><div><button class="btn-ghost" id="promptModalCancel" type="button">取消</button><button class="btn-primary" id="promptModalConfirm" type="button">确定</button></div></div>
+  </div>
+</div>
+
+<!-- P0-2A: confirmation dialog replaces blocking native confirm -->
+<div class="v2-modal-mask" id="wbConfirmMask" aria-hidden="true">
+  <div class="v2-modal wb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="wbConfirmTitle" aria-describedby="wbConfirmMessage" tabindex="-1">
+    <div class="v2-modal-head"><h3 id="wbConfirmTitle">请确认</h3><button class="v2-close" id="wbConfirmClose" type="button" aria-label="关闭">×</button></div>
+    <p class="wb-confirm-message" id="wbConfirmMessage"></p>
+    <div class="v2-modal-foot"><span>取消不会修改内容</span><div><button class="btn-ghost" id="wbConfirmCancel" type="button">取消</button><button class="btn-primary" id="wbConfirmAccept" type="button">确定</button></div></div>
   </div>
 </div>
 
@@ -3272,6 +3285,45 @@ document.addEventListener('keydown',function(e){
   }
 },true);
 
+/* P0-2A: one outstanding confirm, explicit focus restoration and scoped Escape. */
+var wbConfirmActive=null;
+function wbConfirmFinish(accepted){
+  if(!wbConfirmActive)return;
+  var pending=wbConfirmActive;wbConfirmActive=null;
+  wbOverlayDrop('confirm');
+  var mask=$('wbConfirmMask');mask.classList.remove('show');mask.setAttribute('aria-hidden','true');
+  var target=pending.returnFocus;
+  if(target&&document.contains(target))setTimeout(function(){target.focus();},20);
+  pending.resolve(!!accepted);
+}
+function wbConfirmModal(options){
+  if(wbConfirmActive)return Promise.resolve(false);
+  var opts=options||{},mask=$('wbConfirmMask'),yes=$('wbConfirmAccept');
+  $('wbConfirmTitle').textContent=String(opts.title||'请确认');
+  $('wbConfirmMessage').textContent=String(opts.message||'');
+  yes.textContent=String(opts.confirmText||'确定');
+  yes.classList.toggle('wb-confirm-danger',opts.danger===true);
+  return new Promise(function(resolve){
+    wbConfirmActive={resolve:resolve,returnFocus:document.activeElement};
+    mask.classList.add('show');mask.setAttribute('aria-hidden','false');
+    wbOverlayPush('confirm',function(){wbConfirmFinish(false);},function(){return mask.classList.contains('show');});
+    setTimeout(function(){if(wbConfirmActive)$('wbConfirmCancel').focus();},15);
+  });
+}
+$('wbConfirmClose').addEventListener('click',function(){wbConfirmFinish(false);});
+$('wbConfirmCancel').addEventListener('click',function(){wbConfirmFinish(false);});
+$('wbConfirmAccept').addEventListener('click',function(){wbConfirmFinish(true);});
+$('wbConfirmMask').addEventListener('click',function(e){if(e.target===this)wbConfirmFinish(false);});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Tab'||!wbConfirmActive||!wbOverlayStack.length||wbOverlayStack[wbOverlayStack.length-1].id!=='confirm')return;
+  var nodes=Array.from($('wbConfirmMask').querySelectorAll('button:not([disabled])'));
+  if(!nodes.length)return;
+  var idx=nodes.indexOf(document.activeElement);
+  if(idx<0){e.preventDefault();(e.shiftKey?nodes[nodes.length-1]:nodes[0]).focus();return;}
+  var next=idx+(e.shiftKey?-1:1);
+  if(next<0||next>=nodes.length){e.preventDefault();nodes[(next+nodes.length)%nodes.length].focus();}
+},true);
+
 /* ===== 快捷键 ===== */
 document.addEventListener('keydown',function(e){
   if(!e.ctrlKey&&!e.metaKey)return;
@@ -3832,8 +3884,10 @@ var aiTest=document.getElementById('aiTestConnection');if(aiTest)aiTest.addEvent
 });
 var aiClear=document.getElementById('aiClearKey');if(aiClear)aiClear.addEventListener('click',function(){
   var ai=aiBridge();if(!ai)return;
-  if(!confirm('清除已保存的 API Key？'))return;
-  ai.clearKey().then(function(r){if(r&&r.ok){document.getElementById('aiApiKey').value='';renderAIConfigUI(r.config);toast('API Key 已清除');}else setAIConfigStatus('API Key 清除失败','error');}).catch(function(){setAIConfigStatus('API Key 清除失败','error');});
+  wbConfirmModal({title:'清除 API Key',message:'确定清除已保存的 API Key？',confirmText:'清除密钥',danger:true}).then(function(ok){
+    if(!ok)return;
+    ai.clearKey().then(function(r){if(r&&r.ok){document.getElementById('aiApiKey').value='';renderAIConfigUI(r.config);toast('API Key 已清除');}else setAIConfigStatus('API Key 清除失败','error');}).catch(function(){setAIConfigStatus('API Key 清除失败','error');});
+  });
 });
 
 /* 背景换肤：上传图片 + 清除 */
