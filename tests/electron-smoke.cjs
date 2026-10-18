@@ -5,6 +5,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {app, BrowserWindow}=require('electron');
 const profile=process.env.WB_ELECTRON_SMOKE_PROFILE;
+const scenario=process.env.WB_ELECTRON_SMOKE_CASE||'normal';
+assert.ok(['normal','legacy','corrupt'].includes(scenario));
 assert.equal(process.platform,'win32');
 assert.equal(process.env.CI,'true');
 assert.ok(profile&&process.env.RUNNER_TEMP,'CI-only profile missing');
@@ -94,10 +96,38 @@ async function run(){
   await app.whenReady();
   assert.equal(path.resolve(app.getPath('userData')),path.resolve(profile),'Application profile isolation failed');
   const win=await pollUntil(()=>BrowserWindow.getAllWindows()[0],'BrowserWindow');
+  if(scenario==='corrupt'){
+    await pollUntil(async()=>{
+      if(win.webContents.isLoading())return false;
+      return win.webContents.executeJavaScript("typeof loadState !== 'undefined' && loadState==='failed' && !!document.getElementById('retryDataLoad')",true);
+    },'corrupted data failure mode');
+    const state=await win.webContents.executeJavaScript("(function(){return {loaded:loaded,loadState:loadState,saveEnabled:dataReady(),hasProtectedUI:!!document.querySelector('.v2-load-failure')}})()",true);
+    assert.equal(state.loadState,'failed');
+    assert.equal(state.saveEnabled,false);
+    assert.equal(state.hasProtectedUI,true);
+    const result=await win.webContents.executeJavaScript("window.api.flush({todos:[{text:'DANGER'}]})",true);
+    assert.equal(result.ok,false,'flush must be forbidden after corrupt data');
+    assert.equal(result.code,'DATA_WRITE_BLOCKED');
+    console.log('P0_ELECTRON_CORRUPT_UI_PASS: protected failure mode, write blocked');
+    finish(null);return;
+  }
   await pollUntil(async()=>{
     if(win.webContents.isLoading())return false;
     return win.webContents.executeJavaScript('typeof loaded !== "undefined" && loaded && dataReady() && typeof window.v2OpenNewTask==="function"',true);
   },'renderer ready');
+  if(scenario==='legacy'){
+    const migration=await win.webContents.executeJavaScript("(function(){return {version:data.schemaVersion,tasks:data.todos,projects:data.projects,events:data.events,note:data.note,inbox:data.inbox,workLog:data.workLog}})()",true);
+    assert.equal(migration.version,3);
+    assert.equal(migration.tasks.find(t=>t.id==='legacy-task').waitingFor,'部门反馈');
+    assert.equal(migration.tasks.find(t=>t.id==='legacy-task').due,'2027-02-03');
+    assert.equal(migration.tasks.find(t=>t.id==='legacy-task').note,'保留此备注');
+    assert.equal(migration.projects.find(p=>p.id==='legacy-project').name,'历史项目');
+    assert.equal(migration.events['2026-10-18'][0].text,'历史日程');
+    assert.equal(migration.note,'历史便签内容必须保留');
+    assert.equal(migration.inbox[0].rawText,'历史收件箱记录');
+    assert.ok(migration.workLog.some(x=>x.taskId==='legacy-done'&&x.type==='complete'));
+    console.log('P0_ELECTRON_LEGACY_UI_PASS: legacy v2 schema preserved in rendered data');
+  }
   const result=await win.webContents.executeJavaScript('('+smokeRenderer.toString()+')()',true);
   console.log('P0_ELECTRON_GUI_CHECKS: '+JSON.stringify(result));
   if(result.trayAvailable){
