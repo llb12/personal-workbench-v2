@@ -1476,6 +1476,15 @@ body:not(.v2-view) #v2Panel{display:none!important}
   </div>
 </div>
 
+<!-- P0-2: duplicate task review, explicit three-way decision -->
+<div class="v2-modal-mask" id="wbDecisionMask" aria-hidden="true">
+  <div class="v2-modal wb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="wbDecisionTitle" aria-describedby="wbDecisionMessage" tabindex="-1">
+    <div class="v2-modal-head"><h3 id="wbDecisionTitle">检测到重复任务</h3><button class="v2-close" id="wbDecisionClose" type="button" aria-label="关闭">×</button></div>
+    <p class="wb-confirm-message" id="wbDecisionMessage"></p>
+    <div class="v2-modal-foot"><div><button class="btn-ghost" id="wbDecisionCancel" type="button">取消</button><button class="btn-ghost" id="wbDecisionSkip" type="button">跳过重复项</button><button class="btn-primary" id="wbDecisionForce" type="button">仍然写入</button></div></div>
+  </div>
+</div>
+
 <!-- 统一 AI 工作助手：AI 能力集中在场景化侧栏，不占用首页主工作区 -->
 <div class="ai-drawer-mask" id="aiDrawerMask" aria-hidden="true"></div>
 <aside class="ai-drawer" id="aiDrawer" role="dialog" aria-modal="true" aria-labelledby="aiDrawerTitle" tabindex="-1">
@@ -3391,6 +3400,42 @@ document.addEventListener('keydown',function(e){
   if(next<0||next>=nodes.length){e.preventDefault();nodes[(next+nodes.length)%nodes.length].focus();}
 },true);
 
+/* P0-2: skip/insert/cancel without a browser confirm dialog. */
+var wbDecisionActive=null;
+function wbDecisionFinish(choice){
+  if(!wbDecisionActive)return;
+  var pending=wbDecisionActive;wbDecisionActive=null;
+  wbOverlayDrop('decision');
+  var mask=$('wbDecisionMask');mask.classList.remove('show');mask.setAttribute('aria-hidden','true');
+  if(pending.returnFocus&&document.contains(pending.returnFocus))setTimeout(function(){pending.returnFocus.focus();},20);
+  pending.resolve(choice);
+}
+function wbDecisionModal(options){
+  if(wbDecisionActive)return Promise.resolve('cancel');
+  var opts=options||{},mask=$('wbDecisionMask');
+  $('wbDecisionTitle').textContent=String(opts.title||'检测到重复任务');
+  $('wbDecisionMessage').textContent=String(opts.message||'请选择后续操作。');
+  return new Promise(function(resolve){
+    wbDecisionActive={resolve:resolve,returnFocus:document.activeElement};
+    mask.classList.add('show');mask.setAttribute('aria-hidden','false');
+    wbOverlayPush('decision',function(){wbDecisionFinish('cancel');},function(){return mask.classList.contains('show');});
+    setTimeout(function(){if(wbDecisionActive)$('wbDecisionCancel').focus();},15);
+  });
+}
+$('wbDecisionCancel').addEventListener('click',function(){wbDecisionFinish('cancel');});
+$('wbDecisionClose').addEventListener('click',function(){wbDecisionFinish('cancel');});
+$('wbDecisionSkip').addEventListener('click',function(){wbDecisionFinish('skip');});
+$('wbDecisionForce').addEventListener('click',function(){wbDecisionFinish('insert');});
+$('wbDecisionMask').addEventListener('click',function(e){if(e.target===this)wbDecisionFinish('cancel');});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Tab'||!wbDecisionActive||!wbOverlayStack.length||wbOverlayStack[wbOverlayStack.length-1].id!=='decision')return;
+  var nodes=Array.from($('wbDecisionMask').querySelectorAll('button:not([disabled])'));
+  var idx=nodes.indexOf(document.activeElement);if(!nodes.length)return;
+  if(idx<0){e.preventDefault();(e.shiftKey?nodes[nodes.length-1]:nodes[0]).focus();return;}
+  var next=idx+(e.shiftKey?-1:1);
+  if(next<0||next>=nodes.length){e.preventDefault();nodes[(next+nodes.length)%nodes.length].focus();}
+},true);
+
 /* ===== 快捷键 ===== */
 document.addEventListener('keydown',function(e){
   if(!e.ctrlKey&&!e.metaKey)return;
@@ -4827,12 +4872,29 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function v2ConfirmInbox(entry){
     if(!entry||entry.status!=='candidate')return;
+    var sourceData=data,sourceId=entry.id;
     var duplicates=(entry.candidates||[]).filter(function(c){return c.selected!==false&&c.category!=='ignore';}).map(v2FindDuplicateTask).filter(Boolean);
-    if(duplicates.length&&!confirm('发现 '+duplicates.length+' 项可能与已有任务重复。继续写入新任务吗？\n\n已有任务不会被修改或删除。'))return;
-    var added=0;
-    (entry.candidates||[]).forEach(function(c){if(c.selected===false||c.category==='ignore')return;if(v2CreateTaskFromCandidate(entry,c))added++;});
-    if(!added){toast('没有选中可写入的候选项');return;}
-    entry.status='converted';entry.updatedAt=v2Now();save();v2Render();toast('已写入 '+added+' 项任务，原始内容仍保留在收件箱');
+    function commit(skipDuplicates){
+      if(data!==sourceData)return;
+      var current=v2FindInbox(sourceId);if(!current||current.status!=='candidate')return;
+      var added=0;
+      (current.candidates||[]).forEach(function(c){
+        if(c.selected===false||c.category==='ignore')return;
+        if(skipDuplicates&&v2FindDuplicateTask(c))return;
+        if(v2CreateTaskFromCandidate(current,c))added++;
+      });
+      if(!added){toast('没有选中可写入的非重复候选项');return;}
+      current.status='converted';current.updatedAt=v2Now();save();v2Render();
+      toast('已写入 '+added+' 项任务，原始内容仍保留在收件箱');
+    }
+    if(duplicates.length){
+      wbDecisionModal({title:'发现重复任务',message:'发现 '+duplicates.length+' 项可能与已有任务重复。\n\n可以继续写入全部候选项、跳过重复项，或取消。已有任务不会被修改或删除。'}).then(function(choice){
+        if(choice==='insert')commit(false);
+        else if(choice==='skip')commit(true);
+      });
+      return;
+    }
+    commit(false);
   }
   function v2UpdateCandidate(target){
     var host=target&&target.closest('[data-entry-id][data-candidate-id]');if(!host)return null;
