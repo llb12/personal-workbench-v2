@@ -1517,6 +1517,12 @@ body:not(.v2-view) #v2Panel{display:none!important}
       <div class="dw-note">称呼显示在左上角问候；工作台名与一句话显示在左侧栏顶部。都可随意修改。</div>
     </div>
     <div class="dw-sec">
+      <h4>Windows 桌面行为</h4>
+      <div class="dw-row"><label for="desktopCloseToTray">点击 × 后保留在系统托盘</label><input id="desktopCloseToTray" type="checkbox" disabled></div>
+      <div class="dw-note" id="desktopStatus" role="status">正在检查系统托盘支持情况…</div>
+      <div class="dw-note">默认点击 × 完全退出；只有手动开启后才会隐藏到系统托盘。右键托盘图标可打开工作台、快速记录或真正退出。窗口位置自动恢复，不读取或修改任务数据。</div>
+    </div>
+    <div class="dw-sec">
       <h4>外观与背景</h4>
       <div class="sw-list" id="themeList">
         <div class="sw" data-theme-set="light"><span class="sn">浅色</span><span class="sh">明亮清爽</span><input type="radio" name="th"></div>
@@ -3976,6 +3982,22 @@ function syncBgUI(){
 
 /* 设置抽屉 */
 var drawerReturnFocus=null;
+function wbDesktopAPI(){return window.workbench&&window.workbench.desktop||null;}
+function wbRefreshDesktopSettings(){
+  var desktop=wbDesktopAPI(),box=$('desktopCloseToTray'),status=$('desktopStatus');
+  if(!box||!status)return;
+  box.disabled=true;
+  if(!desktop||typeof desktop.getSettings!=='function'){
+    box.checked=false;status.textContent='当前不是支持系统托盘的 Windows 桌面环境';return;
+  }
+  desktop.getSettings().then(function(result){
+    box.disabled=!result||!result.trayAvailable;
+    box.checked=!!(result&&result.closeToTray);
+    status.textContent=result&&result.trayAvailable?'系统托盘可用；当前按上方开关决定关闭行为':'托盘不可用；点击 × 仍将正常退出';
+  }).catch(function(){
+    box.checked=false;box.disabled=true;status.textContent='桌面设置读取失败，已保持原有退出行为';
+  });
+}
 function openDrawer(){
   drawerReturnFocus=document.activeElement;
   var p=data.profile||{};
@@ -3986,6 +4008,7 @@ function openDrawer(){
   syncBgUI();
   syncThemeUI();syncAccentUI();
   loadAIConfigUI();
+  wbRefreshDesktopSettings();
   var dr=document.getElementById('drawer');if(dr)dr.classList.add('show');
   wbOverlayPush('settings',closeDrawer,function(){return !!dr&&dr.classList.contains('show');});
   var dm=document.getElementById('drawerMask');if(dm){dm.classList.add('show');dm.setAttribute('aria-hidden','false');}
@@ -3998,6 +4021,21 @@ function closeDrawer(){
   var target=drawerReturnFocus;drawerReturnFocus=null;
   if(target&&document.contains(target))setTimeout(function(){target.focus();},20);
 }
+var wbTrayBox=$('desktopCloseToTray');
+if(wbTrayBox)wbTrayBox.addEventListener('change',function(){
+  var desktop=wbDesktopAPI(),box=this,status=$('desktopStatus');
+  if(!desktop||typeof desktop.setSettings!=='function'){box.checked=false;box.disabled=true;return;}
+  var wanted=box.checked;box.disabled=true;
+  desktop.setSettings({closeToTray:wanted}).then(function(result){
+    if(!result||!result.ok){
+      wbRefreshDesktopSettings();
+      if(status)status.textContent=result&&result.error||'桌面设置保存失败';
+      return;
+    }
+    wbRefreshDesktopSettings();
+    toast(wanted?'已开启：关闭窗口时保留在系统托盘':'已关闭：点击 × 将完全退出');
+  }).catch(function(){wbRefreshDesktopSettings();if(status)status.textContent='保存桌面设置失败，请重试';});
+});
 var bS=document.getElementById('btnSettings');if(bS)bS.addEventListener('click',openDrawer);
 var dC=document.getElementById('drawerClose');if(dC)dC.addEventListener('click',closeDrawer);
 var dM=document.getElementById('drawerMask');if(dM)dM.addEventListener('click',closeDrawer);
@@ -6085,6 +6123,13 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
 
   function v2OpenQuickRecord(){$('quickRecordText').value='';v2ShowModal('quickRecordMask');}
   window.v2OpenQuickRecord=v2OpenQuickRecord;
+  var desktopBridge=window.workbench&&window.workbench.desktop;
+  if(desktopBridge&&typeof desktopBridge.onQuickCapture==='function'){
+    desktopBridge.onQuickCapture(function(){
+      if(!loaded||!dataReady()){toast('工作台数据尚未加载完成，请稍后再试');return;}
+      v2OpenQuickRecord();
+    });
+  }
   $('btnQuickRecord').addEventListener('click',v2OpenQuickRecord);
   $('quickRecordClose').addEventListener('click',function(){v2CloseModal('quickRecordMask');});$('quickRecordCancel').addEventListener('click',function(){v2CloseModal('quickRecordMask');});
   $('quickRecordSave').addEventListener('click',function(){if(v2AddQuickInbox($('quickRecordText').value))$('quickRecordText').value='';});$('quickRecordText').addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('quickRecordSave').click();});
