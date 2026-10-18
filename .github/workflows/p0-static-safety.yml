@@ -1,0 +1,22 @@
+name: P0 static safety
+on:
+  push:
+    branches:
+      - codex/p0-stability-20261018
+  pull_request:
+    paths:
+      - index.html
+      - tests/p0-safety.test.cjs
+      - .github/workflows/p0-static-safety.yml
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run static and isolated interaction checks
+        run: node tests/p0-safety.test.cjs
