@@ -5130,15 +5130,34 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     appendWorkLog('unarchive',t,v2Now());
     return true;
   }
+  function v2RefreshAfterDelete(){
+    renderBadges();renderTodos();renderKanban();renderAlert();renderReview();save();v2Render();
+  }
   function v2DeleteTaskWithLog(t,id){
     if(!t)return false;
-    if(!confirm('删除这条正式任务？收件箱原始记录不会受影响。'))return false;
-    appendWorkLog('delete',t,v2Now());
-    data.todos=data.todos.filter(function(x){return x.id!==id;});
+    var index=data.todos.findIndex(function(x){return x.id===id;});
+    if(index<0)return false;
+    // Scoped undo: never roll back unrelated tasks or the entire data object.
+    var originalData=data,removed=data.todos[index],hadFocus=data.focusId===id;
+    var removedReminders=v2ReminderQueue.filter(function(x){return x.id===id;});
+    var log=appendWorkLog('delete',removed,v2Now());
+    data.todos.splice(index,1);
     v2ReminderQueue=v2ReminderQueue.filter(function(x){return x.id!==id;});
-    if(data.focusId===id)data.focusId=null;
+    if(hadFocus)data.focusId=null;
     if(v2EditingTaskId===id){v2EditingTaskId=null;v2HomeAI.task=null;}
-    renderBadges();renderTodos();renderKanban();renderAlert();renderReview();save();v2Render();
+    v2RefreshAfterDelete();
+    toast('已删除任务（收件箱原始记录未删除）',{undo:function(){
+      if(data!==originalData){toast('数据已切换，无法撤销此次删除');return;}
+      if(data.todos.some(function(x){return x.id===id;})){toast('任务已存在，未执行重复恢复');return;}
+      data.todos.splice(Math.min(index,data.todos.length),0,removed);
+      if(log&&Array.isArray(data.workLog))data.workLog=data.workLog.filter(function(x){return x.id!==log.id;});
+      removedReminders.forEach(function(item){
+        if(!v2ReminderQueue.some(function(current){return current.id===item.id&&current.kind===item.kind;}))v2ReminderQueue.push(item);
+      });
+      if(hadFocus&&!data.focusId)data.focusId=id;
+      v2RefreshAfterDelete();
+      toast('已恢复任务及对应工作记录');
+    }});
     return true;
   }
   function v2TaskBoardAction(id,act){
