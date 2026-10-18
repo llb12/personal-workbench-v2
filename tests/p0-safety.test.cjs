@@ -114,4 +114,38 @@ assert.equal(assigned.pid,'p1');
 assert.equal(projectData.todos.length,3);
 assert.equal(untouched.pid,'p2');
 
-console.log('P0_STATIC_PASS: syntax, no native dialogs, overlay Esc, IME, task and project scoped undo, import backup preflight');
+
+// P0-3 shortcut dispatch: page navigation, capture, task entry and IME-safe slash.
+const shortcutBegin=html.indexOf('var WB_SHORTCUT_PAGES=');
+const shortcutEnd=html.indexOf('/* ===== 模块展开全屏 ===== */',shortcutBegin);
+assert.ok(shortcutBegin>0&&shortcutEnd>shortcutBegin,'shortcut dispatcher missing');
+const commands=[];
+let keydown=null;
+const searchInput={getClientRects(){return [1]},focus(){commands.push('search')}};
+const shortcutCtx={
+  document:{addEventListener(type,fn){if(type==='keydown')keydown=fn;}},
+  window:{v2Navigate(id){commands.push('nav:'+id)},v2OpenNewTask(){commands.push('task')},v2OpenQuickRecord(){commands.push('capture')}},
+  wbOverlayStack:[],
+  $:id=>id==='v2TaskSearch'?searchInput:{classList:{contains(){return false}}},
+  cmdkOpenFn(){commands.push('cmdk')},
+  switchView(id){commands.push('fallback:'+id)}
+};
+vm.createContext(shortcutCtx);
+vm.runInContext(html.slice(shortcutBegin,shortcutEnd),shortcutCtx);
+assert.equal(typeof keydown,'function');
+function shortcut(key,options={}){
+  let prevented=false;
+  keydown(Object.assign({key,ctrlKey:false,metaKey:false,altKey:false,shiftKey:false,isComposing:false,keyCode:0,which:0,target:{tagName:'DIV'},preventDefault(){prevented=true}},options));
+  return prevented;
+}
+assert.equal(shortcut('1',{ctrlKey:true}),true);
+assert.equal(shortcut('6',{ctrlKey:true}),true);
+assert.equal(shortcut('n',{ctrlKey:true}),true);
+assert.equal(shortcut('N',{ctrlKey:true,shiftKey:true}),true);
+assert.equal(shortcut('k',{ctrlKey:true}),true);
+assert.equal(shortcut('/',{target:{tagName:'INPUT'}}),false);
+assert.equal(shortcut('/',{isComposing:true}),false);
+assert.equal(shortcut('/'),true);
+assert.deepEqual(commands,['nav:home','nav:records','task','capture','cmdk','search']);
+
+console.log('P0_STATIC_PASS: syntax, no native dialogs, overlay Esc, IME, task and project scoped undo, shortcuts, import backup preflight');
