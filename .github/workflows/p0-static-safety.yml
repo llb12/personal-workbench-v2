@@ -60,6 +60,8 @@ jobs:
         run: .\node_modules\.bin\electron-builder.cmd --win --x64 --dir --publish never
       - name: Inspect Windows package contents
         run: node tests/p0-package.test.cjs
+      - name: Launch unpacked packaged app in disposable Windows profile
+        run: node tests/p0-packaged-portable.test.cjs unpacked
       - name: Exercise real Electron window using disposable CI profile
         run: node tests/run-electron-smoke.cjs
       - name: Test v2 data migration and persistence in isolated Electron
@@ -80,5 +82,5 @@ jobs:
         run: .\node_modules\.bin\electron-builder.cmd --win --x64 --publish never
       - name: Verify installer and portable binaries
         run: node tests/p0-installers.test.cjs
-      - name: Launch built portable executable with disposable Windows profile
-        run: node tests/p0-packaged-portable.test.cjs
+      - name: Probe Portable single-file wrapper in disposable Windows profile
+        run: node tests/p0-packaged-portable.test.cjs portable
