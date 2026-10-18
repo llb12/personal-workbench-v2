@@ -51,7 +51,7 @@
       ]
     },
     "nsis": {
-      "artifactName": "${productName} Setup ${version}.${ext}",
+      "artifactName": "Personal_Workbench_Setup_${version}.${ext}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
@@ -66,7 +66,7 @@
       "runAfterFinish": false
     },
     "portable": {
-      "artifactName": "${productName} ${version}.${ext}"
+      "artifactName": "Personal_Workbench_Portable_${version}.${ext}"
     }
   }
 }
