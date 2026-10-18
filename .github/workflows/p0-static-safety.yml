@@ -15,6 +15,7 @@ on:
       - tests/p0-package.test.cjs
       - tests/p0-installers.test.cjs
       - tests/p0-packaged-portable.test.cjs
+      - tests/p0-installed-nsis.test.cjs
       - tests/electron-smoke.cjs
       - tests/run-electron-smoke.cjs
       - scripts/local-preflight.cjs
@@ -84,3 +85,5 @@ jobs:
         run: node tests/p0-installers.test.cjs
       - name: Probe Portable single-file wrapper in disposable Windows profile
         run: node tests/p0-packaged-portable.test.cjs portable
+      - name: Install NSIS into disposable runner and smoke installed executable
+        run: node tests/p0-installed-nsis.test.cjs
