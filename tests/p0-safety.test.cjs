@@ -11,6 +11,12 @@ const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
 assert.ok(scripts.length>=1,'inline script not found');
 scripts.forEach((match,i)=>new vm.Script(match[1],{filename:'index.html inline '+i}));
 assert.equal((html.match(/\b(?:window\.)?prompt\s*\(/g)||[]).length,0,'native prompt still present');
+assert.equal((html.match(/\b(?:window\.)?confirm\s*\(/g)||[]).length,0,'native confirm still present');
+assert.equal((html.match(/\b(?:window\.)?alert\s*\(/g)||[]).length,0,'native alert still present');
+assert.equal((html.match(/id="wbDecisionMask"/g)||[]).length,1,'three-way decision dialog missing');
+assert.ok(html.includes('function wbErrorModal('),'persistent in-app error dialog missing');
+const importFlow=html.slice(html.indexOf("$('btnImport').addEventListener("),html.indexOf("$('fileInput').addEventListener("));
+assert.ok(importFlow.indexOf('save(true).then')>=0&&importFlow.indexOf('window.api.importData()')>importFlow.indexOf('save(true).then'),'latest data must flush before main-process pre-import backup');
 assert.equal((html.match(/id="promptModalMask"/g)||[]).length,1);
 assert.equal((html.match(/id="wbConfirmMask"/g)||[]).length,1);
 assert.ok(!html.includes("if(e.key==='Escape'){if(document.activeElement)document.activeElement.blur();return;}"),'legacy Escape focus loss present');
@@ -76,4 +82,36 @@ assert.equal(original.workLog.length,0,'undo should remove only the matching del
 assert.deepEqual(sandbox.v2ReminderQueue.map(t=>t.id).sort(),['one','two']);
 assert.equal(original.focusId,'one');
 assert.ok(renders>=2);
-console.log('P0_STATIC_PASS: syntax, modal IDs, native prompt removal, overlay Esc, IME, scoped task undo');
+
+// Project deletion undo restores only tasks still ungrouped; unrelated edits survive.
+const project={id:'p1',name:'Project'};
+const assigned={id:'a',pid:'p1',projectId:'p1'};
+const untouched={id:'b',pid:'p2',projectId:'p2'};
+const projectData={projects:[project],todos:[assigned,untouched]};
+const expanded={p1:true};
+let undoProject=null;
+const projectCtx={
+  data:projectData,projExpanded:expanded,
+  projectsById(){return Object.fromEntries(projectData.projects.map(p=>[p.id,p]));},
+  todoById(id){return projectData.todos.find(t=>t.id===id)||null;},
+  renderTodos(){},renderOverview(){},renderAlert(){},renderDoneList(){},renderCal(){},save(){},
+  window:{v2Render(){}},toast(msg,opts){if(opts&&opts.undo)undoProject=opts.undo;}
+};
+const projBegin=html.indexOf('function deleteProject(id){');
+const projEnd=html.indexOf('function completeProject(id,done)',projBegin);
+assert.ok(projBegin>0&&projEnd>projBegin);
+vm.createContext(projectCtx);
+vm.runInContext(html.slice(projBegin,projEnd),projectCtx);
+projectCtx.deleteProject('p1');
+assert.equal(projectData.projects.length,0);
+assert.equal(assigned.pid,null);
+assert.equal(untouched.pid,'p2');
+assert.equal(typeof undoProject,'function');
+projectData.todos.push({id:'new',pid:'p2',projectId:'p2'});
+undoProject();
+assert.equal(projectData.projects.length,1);
+assert.equal(assigned.pid,'p1');
+assert.equal(projectData.todos.length,3);
+assert.equal(untouched.pid,'p2');
+
+console.log('P0_STATIC_PASS: syntax, no native dialogs, overlay Esc, IME, task and project scoped undo, import backup preflight');
