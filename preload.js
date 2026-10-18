@@ -15,6 +15,16 @@ contextBridge.exposeInMainWorld('api', {
 
 // V2.1 的 AI 边界：页面只拿到无密钥的配置状态，实际请求由主进程完成。
 contextBridge.exposeInMainWorld('workbench', {
+  desktop: {
+    getSettings: () => ipcRenderer.invoke('desktop-get-settings'),
+    setSettings: (settings) => ipcRenderer.invoke('desktop-set-settings', settings),
+    onQuickCapture: (handler) => {
+      if (typeof handler !== 'function') return () => {};
+      const listener = () => handler();
+      ipcRenderer.on('desktop-quick-capture', listener);
+      return () => ipcRenderer.removeListener('desktop-quick-capture', listener);
+    }
+  },
   background: {
     choose: () => ipcRenderer.invoke('background-choose'),
     remove: (managedPath) => ipcRenderer.invoke('background-remove', managedPath),
