@@ -141,6 +141,11 @@ function createDesktopLifecycle(deps) {
 
   function attachWindow(win) {
     currentWindow = win;
+    // A renderer may veto app.quit when its unsaved data cannot be flushed.
+    // In that case do not leave quitting=true or disable close-to-tray.
+    if (win.webContents && typeof win.webContents.on === 'function') {
+      win.webContents.on('will-prevent-unload', () => { quitting = false; });
+    }
     win.on('move', scheduleWindowBounds);
     win.on('resize', scheduleWindowBounds);
     win.on('close', event => {
@@ -169,12 +174,16 @@ function createDesktopLifecycle(deps) {
   function beforeQuit() {
     quitting = true;
     flushWindowBounds();
+    // Electron may cancel app.quit after 'before-quit' (e.g. beforeunload veto).
+    // Keep the tray alive until the application reaches 'will-quit'.
+  }
+  function willQuit() {
     if (tray) { try { tray.destroy(); } catch (_) {} tray = null; }
   }
 
   return {
     getWindowBounds, attachWindow, ensureTray, getSettings, setSettings,
-    showWindow, quickCapture, beforeQuit,
+    showWindow, quickCapture, beforeQuit, willQuit,
     // Diagnostics for isolated tests; never exported to renderer.
     _settingsPath: settingsFile
   };
