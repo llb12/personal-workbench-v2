@@ -26,8 +26,9 @@ function harness(options={}) {
     hide(){this.hidden=true;this.visible=false;},
     show(){this.hidden=false;this.visible=true;},
     focus(){this.focused=true;},restore(){this.minimized=false;},
-    webContents:{loading:false,sent:[],isLoading(){return this.loading;},
+    webContents:{loading:false,sent:[],handlers:{},isLoading(){return this.loading;},
       send(event){this.sent.push(event);},
+      on(type,handler){this.handlers[type]=handler;},
       once(type,handler){this.pendingLoad=handler;}
     }
   };
@@ -79,9 +80,18 @@ function harness(options={}) {
   assert.deepEqual(win.webContents.sent,['desktop-quick-capture']);
   const quit=menu.template.find(x=>x.label==='退出个人工作台');
   quit.click();assert.equal(app.quitCount,1);
-  lifecycle.beforeQuit();assert.equal(h.options.trayInstance.destroyed,true);
+  lifecycle.beforeQuit();
+  assert.equal(h.options.trayInstance.destroyed,false,'Tray must remain until successful app shutdown');
   prevented=false;events.close({preventDefault(){prevented=true;}});
   assert.equal(prevented,false,'explicit quit must never hide to tray');
+  // Renderer refuses to unload when latest data cannot be saved.
+  win.webContents.handlers['will-prevent-unload']();
+  prevented=false;events.close({preventDefault(){prevented=true;}});
+  assert.equal(prevented,true,'Canceled quit must restore opt-in close-to-tray');
+  assert.equal(h.options.trayInstance.destroyed,false,'Canceled quit must not destroy tray');
+  assert.equal(lifecycle.getSettings().trayAvailable,true);
+  lifecycle.willQuit();
+  assert.equal(h.options.trayInstance.destroyed,true,'Tray destroyed only on final will-quit');
 }
 
 // Delayed renderer load must not lose quick capture.
@@ -122,4 +132,4 @@ function harness(options={}) {
 
 // Desktop settings must never share the task data file or AI secret storage.
 assert.ok(!require('node:fs').readFileSync(path.join(__dirname,'../desktop-lifecycle.js'),'utf8').includes("'data.json'"));
-console.log('P0_DESKTOP_PASS: default exit, opt-in tray, capture, quit, bounds, bad icon, isolation');
+console.log('P0_DESKTOP_PASS: default exit, opt-in tray, unload veto, capture, quit, bounds, bad icon, isolation');
