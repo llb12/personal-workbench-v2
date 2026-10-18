@@ -1472,7 +1472,7 @@ body:not(.v2-view) #v2Panel{display:none!important}
   <div class="v2-modal wb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="wbConfirmTitle" aria-describedby="wbConfirmMessage" tabindex="-1">
     <div class="v2-modal-head"><h3 id="wbConfirmTitle">请确认</h3><button class="v2-close" id="wbConfirmClose" type="button" aria-label="关闭">×</button></div>
     <p class="wb-confirm-message" id="wbConfirmMessage"></p>
-    <div class="v2-modal-foot"><span>取消不会修改内容</span><div><button class="btn-ghost" id="wbConfirmCancel" type="button">取消</button><button class="btn-primary" id="wbConfirmAccept" type="button">确定</button></div></div>
+    <div class="v2-modal-foot"><span id="wbConfirmHint">取消不会修改内容</span><div><button class="btn-ghost" id="wbConfirmCancel" type="button">取消</button><button class="btn-primary" id="wbConfirmAccept" type="button">确定</button></div></div>
   </div>
 </div>
 
@@ -3278,26 +3278,55 @@ function validateBrowserImport(obj){
   if(obj.events!==undefined&&(!obj.events||typeof obj.events!=='object'||Array.isArray(obj.events)))return 'events 必须是对象';
   return '';
 }
+function wbCountEvents(events){
+  if(!events||typeof events!=='object')return 0;
+  return Object.keys(events).reduce(function(n,key){return n+(Array.isArray(events[key])?events[key].length:0);},0);
+}
 function applyImported(obj){
-  if(!dataReady()){toast('数据尚未成功加载，已保护原数据');return;}
+  if(!dataReady()){wbErrorModal('导入已暂停','数据尚未成功加载，已保护原数据。');return;}
   var invalid=validateBrowserImport(obj);
-  if(invalid){alert('导入失败：'+invalid+'\n原有数据未改动。');return;}
-  if(!confirm('导入将覆盖当前全部数据，确定继续？'))return;
+  if(invalid){wbErrorModal('导入失败',invalid+'\n原有数据未改动。');return;}
   var previous=data;
-  data=normalize(obj);applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();autoDefer();renderCore();
-  save(true).then(function(result){
-    if(result&&result.ok){toast('导入成功，数据已恢复');return;}
-    data=previous;applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();renderCore();
-    alert('导入后的数据未能保存，已恢复导入前的界面数据。');
+  var currentCount='当前：'+data.todos.length+' 项任务、'+data.projects.length+' 个项目、'+wbCountEvents(data.events)+' 条日程';
+  var incomingCount='导入：'+(obj.todos||[]).length+' 项任务、'+(obj.projects||[]).length+' 个项目、'+wbCountEvents(obj.events)+' 条日程';
+  wbConfirmModal({
+    title:'覆盖并导入',
+    message:currentCount+'\n'+incomingCount+'\n\n导入将覆盖当前全部数据。Electron 模式会先在本地保留导入前备份。',
+    confirmText:'覆盖并导入',danger:true
+  }).then(function(ok){
+    if(!ok)return;
+    if(data!==previous){wbErrorModal('导入已取消','当前数据在确认期间发生变化，请重新选择备份文件。');return;}
+    data=normalize(obj);applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();autoDefer();renderCore();
+    save(true).then(function(result){
+      if(result&&result.ok){toast('导入成功，数据已恢复');if(window.v2Render)window.v2Render();return;}
+      data=previous;applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();renderCore();
+      if(window.v2Render)window.v2Render();
+      wbErrorModal('保存导入数据失败','已恢复导入前的界面数据。请保留导入前备份并检查磁盘状态。');
+    }).catch(function(error){
+      data=previous;applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();renderCore();
+      if(window.v2Render)window.v2Render();
+      wbErrorModal('保存导入数据失败','已尝试恢复导入前的界面数据：'+String(error&&error.message||'未知错误'));
+    });
   });
 }
 $('btnImport').addEventListener('click',function(){
-  if(!dataReady()){toast('数据尚未成功加载，已暂停导入导出');return;}
-  if(HAS_API){window.api.importData().then(function(r){if(!r)return;if(r.error){alert(r.error+'\n原有数据未改动。');return;}applyImported(r.data);}).catch(function(){alert('导入失败：无法读取所选文件。\n原有数据未改动。');});return;}
+  if(!dataReady()){wbErrorModal('导入已暂停','数据尚未成功加载，已保护原数据。');return;}
+  if(HAS_API){
+    // Flush newest edits before main.js creates its existing on-disk .before-import backup.
+    save(true).then(function(saved){
+      if(!saved||!saved.ok){wbErrorModal('导入已暂停','当前数据尚未安全保存：'+String(saved&&saved.error||'未知错误'));return;}
+      return window.api.importData().then(function(r){
+        if(!r)return;
+        if(r.error){wbErrorModal('导入失败',r.error+'\n原有数据未改动。');return;}
+        applyImported(r.data);
+      });
+    }).catch(function(error){wbErrorModal('导入失败','无法读取所选文件：'+String(error&&error.message||'未知错误')+'\n原有数据未改动。');});
+    return;
+  }
   $('fileInput').click();
 });
 $('fileInput').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var fr=new FileReader();
-  fr.onload=function(){try{applyImported(JSON.parse(fr.result));}catch(e){alert('导入失败：文件不是有效 JSON。\n原有数据未改动。');}};fr.readAsText(f,'utf-8');this.value='';});
+  fr.onload=function(){try{applyImported(JSON.parse(fr.result));}catch(e){wbErrorModal('导入失败','文件不是有效 JSON。\n原有数据未改动。');}};fr.readAsText(f,'utf-8');this.value='';});
 $('bannerClose').addEventListener('click',function(){bannerDismissed=true;$('banner').classList.remove('show');});
 
 /* P0-4: one Escape dispatcher. The stack tracks actual opening order. */
@@ -3336,19 +3365,22 @@ function wbConfirmModal(options){
   var opts=options||{},mask=$('wbConfirmMask'),yes=$('wbConfirmAccept');
   $('wbConfirmTitle').textContent=String(opts.title||'请确认');
   $('wbConfirmMessage').textContent=String(opts.message||'');
-  yes.textContent=String(opts.confirmText||'确定');
+  yes.textContent=String(opts.confirmText||(opts.notice?'知道了':'确定'));
   yes.classList.toggle('wb-confirm-danger',opts.danger===true);
+  $('wbConfirmCancel').style.display=opts.notice?'none':'';
+  $('wbConfirmHint').textContent=opts.notice?'请阅读提示后关闭':'取消不会修改内容';
   return new Promise(function(resolve){
     wbConfirmActive={resolve:resolve,returnFocus:document.activeElement};
     mask.classList.add('show');mask.setAttribute('aria-hidden','false');
     wbOverlayPush('confirm',function(){wbConfirmFinish(false);},function(){return mask.classList.contains('show');});
-    setTimeout(function(){if(wbConfirmActive)$('wbConfirmCancel').focus();},15);
+    setTimeout(function(){if(wbConfirmActive)$(opts.notice?'wbConfirmAccept':'wbConfirmCancel').focus();},15);
   });
 }
 $('wbConfirmClose').addEventListener('click',function(){wbConfirmFinish(false);});
 $('wbConfirmCancel').addEventListener('click',function(){wbConfirmFinish(false);});
 $('wbConfirmAccept').addEventListener('click',function(){wbConfirmFinish(true);});
 $('wbConfirmMask').addEventListener('click',function(e){if(e.target===this)wbConfirmFinish(false);});
+function wbErrorModal(title,message){return wbConfirmModal({title:title||'操作失败',message:String(message||'请检查后重试'),notice:true});}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Tab'||!wbConfirmActive||!wbOverlayStack.length||wbOverlayStack[wbOverlayStack.length-1].id!=='confirm')return;
   var nodes=Array.from($('wbConfirmMask').querySelectorAll('button:not([disabled])'));
