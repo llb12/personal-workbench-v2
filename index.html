@@ -2851,7 +2851,7 @@ function wbRemoveCalendarEvent(src,index,target){
   toast('已删除日程',{undo:function(){
     if(data!==sourceData){toast('数据已切换，无法撤销');return;}
     if(!data.events[src])data.events[src]=[];
-    if(data.events[src].indexOf(removed)<0)data.events[src].splice(Math.min(index,data.events[src].length),0,removed);
+    if(typeof removed==='string'||data.events[src].indexOf(removed)<0)data.events[src].splice(Math.min(index,data.events[src].length),0,removed);
     renderCal();renderOverview();save();
     toast('已恢复日程');
   }});
@@ -3392,7 +3392,9 @@ $('wbConfirmMask').addEventListener('click',function(e){if(e.target===this)wbCon
 function wbErrorModal(title,message){return wbConfirmModal({title:title||'操作失败',message:String(message||'请检查后重试'),notice:true});}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Tab'||!wbConfirmActive||!wbOverlayStack.length||wbOverlayStack[wbOverlayStack.length-1].id!=='confirm')return;
-  var nodes=Array.from($('wbConfirmMask').querySelectorAll('button:not([disabled])'));
+  var nodes=Array.from($('wbConfirmMask').querySelectorAll('button:not([disabled])')).filter(function(el){
+    return el.style.display!=='none'&&!el.hidden&&(el.offsetWidth>0||el.offsetHeight>0||el.getClientRects().length>0);
+  });
   if(!nodes.length)return;
   var idx=nodes.indexOf(document.activeElement);
   if(idx<0){e.preventDefault();(e.shiftKey?nodes[nodes.length-1]:nodes[0]).focus();return;}
