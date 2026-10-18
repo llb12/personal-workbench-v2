@@ -12,6 +12,7 @@ on:
       - package.json
       - tests/p0-safety.test.cjs
       - tests/desktop-lifecycle.test.cjs
+      - tests/p0-package.test.cjs
       - .github/workflows/p0-static-safety.yml
 jobs:
   check:
@@ -34,3 +35,22 @@ jobs:
           node --check desktop-lifecycle.js
           node tests/p0-safety.test.cjs
           node tests/desktop-lifecycle.test.cjs
+
+  windows-package:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Electron dependencies in isolated runner
+        run: npm ci --no-audit --no-fund
+      - name: Build unpacked Windows candidate (no release, no signing)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: .\\node_modules\\.bin\\electron-builder.cmd --win --x64 --dir --publish never
+      - name: Inspect Windows package contents
+        run: node tests/p0-package.test.cjs
