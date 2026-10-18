@@ -3252,9 +3252,28 @@ $('fileInput').addEventListener('change',function(){var f=this.files&&this.files
   fr.onload=function(){try{applyImported(JSON.parse(fr.result));}catch(e){alert('导入失败：文件不是有效 JSON。\n原有数据未改动。');}};fr.readAsText(f,'utf-8');this.value='';});
 $('bannerClose').addEventListener('click',function(){bannerDismissed=true;$('banner').classList.remove('show');});
 
+/* P0-4: one Escape dispatcher. The stack tracks actual opening order. */
+var wbOverlayStack=[];
+function wbOverlayPush(id,close,isOpen){
+  wbOverlayDrop(id);
+  wbOverlayStack.push({id:id,close:close,isOpen:isOpen});
+}
+function wbOverlayDrop(id){
+  for(var i=wbOverlayStack.length-1;i>=0;i--)if(wbOverlayStack[i].id===id)wbOverlayStack.splice(i,1);
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape'||e.isComposing===true||e.keyCode===229||e.which===229)return;
+  while(wbOverlayStack.length){
+    var top=wbOverlayStack[wbOverlayStack.length-1];
+    if(top.isOpen&&!top.isOpen()){wbOverlayStack.pop();continue;}
+    e.preventDefault();e.stopImmediatePropagation();
+    top.close();
+    return;
+  }
+},true);
+
 /* ===== 快捷键 ===== */
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){if(document.activeElement)document.activeElement.blur();return;}
   if(!e.ctrlKey&&!e.metaKey)return;
   var map={1:'todoText',2:'evText',3:'note'};var k=String(e.key).toLowerCase();
   if(k==='4'){e.preventDefault();var i=$('todoText');if(i)i.focus();return;}
@@ -3272,6 +3291,7 @@ function expandModule(id){
   $('expBody').appendChild(card);
   $('expanded').classList.add('show');
   expandedModule=id;
+  wbOverlayPush('legacy-expanded',collapseModule,function(){return !!expandedModule;});
   if(id==='cardKanban'){renderKanban();}
   else if(id==='cardCal')renderCal();
   else if(id==='cardTodo')renderTodos();
@@ -3280,6 +3300,7 @@ function expandModule(id){
 }
 function collapseModule(){
   if(!expandedModule)return;
+  wbOverlayDrop('legacy-expanded');
   var card=$(expandedModule);
   $('expanded').classList.remove('show');
   if(cardHome&&cardHome.parent)cardHome.parent.insertBefore(card,cardHome.next);
@@ -3291,7 +3312,6 @@ function collapseModule(){
   expandedModule=null;cardHome=null;
 }
 $('expBack').addEventListener('click',collapseModule);
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&expandedModule)collapseModule();});
 ['cardTodo','cardCal','cardNote','cardKanban','cardReview'].forEach(function(id){
   var card=$(id);if(!card)return;
   var hd=card.querySelector('.card-hd');
@@ -3767,10 +3787,12 @@ function openDrawer(){
   syncThemeUI();syncAccentUI();
   loadAIConfigUI();
   var dr=document.getElementById('drawer');if(dr)dr.classList.add('show');
+  wbOverlayPush('settings',closeDrawer,function(){return !!dr&&dr.classList.contains('show');});
   var dm=document.getElementById('drawerMask');if(dm){dm.classList.add('show');dm.setAttribute('aria-hidden','false');}
   setTimeout(function(){if(dr)dr.focus();},20);
 }
 function closeDrawer(){
+  wbOverlayDrop('settings');
   var dr=document.getElementById('drawer');if(dr)dr.classList.remove('show');
   var dm=document.getElementById('drawerMask');if(dm){dm.classList.remove('show');dm.setAttribute('aria-hidden','true');}
   var target=drawerReturnFocus;drawerReturnFocus=null;
@@ -3779,9 +3801,6 @@ function closeDrawer(){
 var bS=document.getElementById('btnSettings');if(bS)bS.addEventListener('click',openDrawer);
 var dC=document.getElementById('drawerClose');if(dC)dC.addEventListener('click',closeDrawer);
 var dM=document.getElementById('drawerMask');if(dM)dM.addEventListener('click',closeDrawer);
-document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'&&$('drawer').classList.contains('show')){e.preventDefault();closeDrawer();}
-});
 ['setName','setWsName','setWsSub','setCity'].forEach(function(id){
   var el=document.getElementById(id);if(!el)return;
   el.addEventListener('input',function(){var v=this.value;var p=data.profile;
@@ -3896,11 +3915,13 @@ function cmdkRender(){
 function cmdkOpenFn(){
   cmdkReturnFocus=document.activeElement;
   $('cmdkMask').classList.add('show');
+  wbOverlayPush('command',function(){cmdkClose();},function(){return $('cmdkMask').classList.contains('show');});
   cmdkItems=cmdkBuild('');cmdkSel=0;cmdkRender();
   $('cmdkInput').value='';
   setTimeout(function(){$('cmdkInput').focus();},30);
 }
 function cmdkClose(restore){
+  wbOverlayDrop('command');
   $('cmdkMask').classList.remove('show');
   var target=cmdkReturnFocus;cmdkReturnFocus=null;
   if(restore!==false&&target&&document.contains(target))setTimeout(function(){target.focus();},20);
@@ -3917,7 +3938,6 @@ $('cmdkMask').addEventListener('click',function(e){if(e.target===this)cmdkClose(
 var bCk=document.getElementById('btnCmdk');if(bCk)bCk.addEventListener('click',cmdkOpenFn);
 document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){e.preventDefault();cmdkOpenFn();return;}
-  if(e.key==='Escape'&&$('cmdkMask').classList.contains('show')){cmdkClose();}
 });
 
 /* ===== 薪酬节点一键模板 ===== */
@@ -4927,10 +4947,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var dr=$('aiDrawer'),mask=$('aiDrawerMask');if(!dr||!mask)return;
     v2AIDrawerReturnFocus=document.activeElement;
     dr.classList.add('show');mask.classList.add('show');mask.setAttribute('aria-hidden','false');dr.setAttribute('aria-hidden','false');
+    wbOverlayPush('ai-drawer',closeAIAssistant,function(){return dr.classList.contains('show');});
     renderAIDrawer();setTimeout(function(){if($('aiDrawerClose'))$('aiDrawerClose').focus();},25);
   }
   window.openAIAssistant=openAIAssistant;
   function closeAIAssistant(){
+    wbOverlayDrop('ai-drawer');
     var dr=$('aiDrawer'),mask=$('aiDrawerMask');if(dr)dr.classList.remove('show');if(mask){mask.classList.remove('show');mask.setAttribute('aria-hidden','true');}if(dr)dr.setAttribute('aria-hidden','true');
     var target=v2AIDrawerReturnFocus;v2AIDrawerReturnFocus=null;if(target&&document.contains(target))setTimeout(function(){target.focus();},20);
   }
@@ -5393,6 +5415,20 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(!count)h+='<div class="reminder-center-empty">暂无提醒。设置任务的提醒、截止提醒或跟进时间后，会集中显示在这里。</div>';
     box.innerHTML=h;box.classList.toggle('show',v2ReminderCenterOpen);box.setAttribute('aria-hidden',v2ReminderCenterOpen?'false':'true');
   }
+  function v2SetReminderOpen(value){
+    v2ReminderCenterOpen=!!value;
+    if(v2ReminderCenterOpen)wbOverlayPush('reminder-center',function(){v2SetReminderOpen(false);},function(){return v2ReminderCenterOpen;});
+    else wbOverlayDrop('reminder-center');
+    var btn=$('btnReminderCenter');if(btn)btn.setAttribute('aria-expanded',v2ReminderCenterOpen?'true':'false');
+    renderV2ReminderCenter();
+  }
+  function v2SetMoreOpen(value){
+    v2MoreOpen=!!value;
+    if(v2MoreOpen)wbOverlayPush('more-menu',function(){v2SetMoreOpen(false);},function(){return v2MoreOpen;});
+    else wbOverlayDrop('more-menu');
+    var m=$('moreMenu');if(m){m.classList.toggle('show',v2MoreOpen);m.setAttribute('aria-hidden',v2MoreOpen?'false':'true');}
+    var b=$('btnMore');if(b)b.setAttribute('aria-expanded',v2MoreOpen?'true':'false');
+  }
   function v2RemoveReminder(id){v2ReminderQueue=v2ReminderQueue.filter(function(x){return x.id!==id;});renderV2ReminderTray();}
   function v2ReminderAction(id,act,minutes){
     var t=todoById(id);if(!t||!v2IsOpen(t)){v2RemoveReminder(id);return;}
@@ -5474,11 +5510,10 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   window.v2PromptModal=v2PromptModal;
   function v2VisibleTopModal(){
-    for(var i=V2_MODAL_IDS.length-1;i>=0;i--){
-      var mask=$(V2_MODAL_IDS[i]);
-      if(mask&&mask.classList.contains('show')&&mask.getAttribute('aria-hidden')!=='true')return mask;
-    }
-    return null;
+    var top=wbOverlayStack.length?wbOverlayStack[wbOverlayStack.length-1]:null;
+    if(!top||top.id.indexOf('v2-modal:')!==0)return null;
+    var mask=$(top.id.slice('v2-modal:'.length));
+    return mask&&mask.classList.contains('show')&&mask.getAttribute('aria-hidden')!=='true'?mask:null;
   }
   function v2ModalFocusable(mask){
     if(!mask)return [];
@@ -5497,11 +5532,13 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(top)v2ModalReturnFocusById[id]=document.activeElement;
     else v2ModalReturnFocus=document.activeElement;
     mask.classList.add('show');mask.setAttribute('aria-hidden','false');
+    wbOverlayPush('v2-modal:'+id,function(){if(id==='aiPreviewMask')v2CancelAIConfirm();else if(id==='promptModalMask')v2FinishPrompt(null);else v2CloseModal(id);},function(){return mask.classList.contains('show');});
     setTimeout(function(){if(mask.classList.contains('show'))v2FocusModal(mask);},20);
   }
   function v2CloseModal(id){
     var mask=$(id);if(!mask)return;
     mask.classList.remove('show');mask.setAttribute('aria-hidden','true');
+    wbOverlayDrop('v2-modal:'+id);
     var target=v2ModalReturnFocusById[id]||null;delete v2ModalReturnFocusById[id];
     var remaining=v2VisibleTopModal();
     if(!target&&!remaining){target=v2ModalReturnFocus;v2ModalReturnFocus=null;}
@@ -5666,7 +5703,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var anchor=e.target.closest('[data-v2-anchor]');
     if(anchor){var id=anchor.getAttribute('data-v2-anchor');if(v2Mode!=='home'){switchV2('home');setTimeout(function(){v2ScrollToHomeAnchor(id);},30);}else v2ScrollToHomeAnchor(id);return;}
     var action=e.target.closest('[data-v2-status-action]');
-    if(action&&action.getAttribute('data-v2-status-action')==='reminders'){v2ReminderCenterOpen=true;v2MoreOpen=false;if($('btnReminderCenter'))$('btnReminderCenter').setAttribute('aria-expanded','true');if($('btnMore'))$('btnMore').setAttribute('aria-expanded','false');renderV2ReminderCenter();}
+    if(action&&action.getAttribute('data-v2-status-action')==='reminders'){v2SetMoreOpen(false);v2SetReminderOpen(true);}
   });
   $('v2Content').addEventListener('click',function(e){
     if(e.target.closest('#v2InboxAnalyze')){v2PrepareInbox($('v2InboxText').value,'paste',v2InboxActiveId);return;}
@@ -5680,7 +5717,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var recordOpen=e.target.closest('[data-v2-record-open]');if(recordOpen){v2OpenTaskModal(recordOpen.getAttribute('data-v2-record-open'),false);return;}
     var recordRangeBtn=e.target.closest('[data-v2-record-range]');if(recordRangeBtn){v2RecordRange=recordRangeBtn.getAttribute('data-v2-record-range');v2Render();return;}
     var sourceBtn=e.target.closest('[data-v2-ai-source-id]');if(sourceBtn){v2OpenAISource(sourceBtn.getAttribute('data-v2-ai-source-id'),sourceBtn.getAttribute('data-v2-ai-source-type'));return;}
-    var smart=e.target.closest('[data-v2-smart-target]');if(smart){var smartTarget=smart.getAttribute('data-v2-smart-target'),smartTab=smart.getAttribute('data-v2-smart-tab');if(smartTarget==='reminders'){v2ReminderCenterOpen=true;renderV2ReminderCenter();}else v2Navigate(smartTarget,{tab:smartTab});e.stopPropagation();return;}
+    var smart=e.target.closest('[data-v2-smart-target]');if(smart){var smartTarget=smart.getAttribute('data-v2-smart-target'),smartTab=smart.getAttribute('data-v2-smart-tab');if(smartTarget==='reminders'){v2SetMoreOpen(false);v2SetReminderOpen(true);}else v2Navigate(smartTarget,{tab:smartTab});e.stopPropagation();return;}
     var aiAction=e.target.closest('[data-v2-ai-action]');if(aiAction){var aa=aiAction.getAttribute('data-v2-ai-action'),noticeEntryId=aiAction.getAttribute('data-v2-ai-entry-id')||v2InboxActiveId;if(aa==='settings')openDrawer();else if(aa==='local')v2UseLocalInbox(noticeEntryId);else if(aa==='retry'){var retryEntry=v2FindInbox(noticeEntryId);if(retryEntry)runInboxAIAnalysis(retryEntry.rawText,retryEntry.sourceType,retryEntry.id,{origin:v2InboxAIState.origin||'inbox',showHome:v2InboxAIState.showHome,navigateOnSuccess:v2InboxAIState.origin==='home'||v2InboxAIState.origin==='assistant'});}else if(aa==='planToday')v2RequestPlanToday();else if(aa==='summarizeDay')v2RequestDaySummary();else if(aa==='summarizeWeek')v2RequestWeekSummary();else if(aa==='reviewWeek')v2RequestReviewSummary('week');else if(aa==='reviewMonth')v2RequestReviewSummary('month');return;}
     var planBtn=e.target.closest('[data-v2-plan-apply]');if(planBtn){v2ApplyPlan(planBtn.getAttribute('data-v2-plan-apply'));return;}
     var nav=e.target.closest('[data-v2-nav]');if(nav){var target=nav.getAttribute('data-v2-nav');v2Navigate(target,{tab:nav.getAttribute('data-v2-tab'),view:nav.getAttribute('data-v2-view'),section:nav.getAttribute('data-v2-section'),recordTab:nav.getAttribute('data-v2-record-tab')});return;}
@@ -5778,14 +5815,6 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   $('taskAIAssist').addEventListener('click',function(e){var b=e.target.closest('[data-task-ai-action]');if(b){v2TaskAIAction(b.getAttribute('data-task-ai-action'));return;}var use=e.target.closest('[data-task-ai-apply-followup]');if(use){$('taskEditFollowUp').value=v2InputDateTime(use.getAttribute('data-task-ai-apply-followup'));toast('已填入建议跟进时间，请确认后保存');return;}var copy=e.target.closest('[data-task-ai-copy-draft]');if(copy){var draft=$('taskAIResult').innerText.replace(/^可编辑草稿（不会自动发送）\s*/,'').replace(/复制草稿\s*$/,'').trim();copyText(draft);}});
   ['quickRecordMask','taskModalMask'].forEach(function(id){$(id).addEventListener('click',function(e){if(e.target===this)v2CloseModal(id);});});
   $('aiPreviewClose').addEventListener('click',v2CancelAIConfirm);$('aiPreviewCancel').addEventListener('click',v2CancelAIConfirm);$('aiPreviewContinue').addEventListener('click',function(){var pending=v2PendingAI;v2PendingAI=null;v2CloseModal('aiPreviewMask');if(pending&&pending.proceed)pending.proceed();});
-  document.addEventListener('keydown',function(e){
-    if(e.key!=='Escape')return;
-    var mask=v2VisibleTopModal();if(!mask)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    if(mask.id==='aiPreviewMask'){v2CancelAIConfirm();return;}
-    if(mask.id==='promptModalMask'){v2FinishPrompt(null);return;}
-    v2CloseModal(mask.id);
-  }, true);
   $('promptModalClose').addEventListener('click',function(){v2FinishPrompt(null);});
   $('promptModalCancel').addEventListener('click',function(){v2FinishPrompt(null);});
   $('promptModalConfirm').addEventListener('click',v2ConfirmPrompt);
@@ -5801,13 +5830,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var follow=e.target.closest('[data-task-ai-apply-followup]');if(follow){var ft=todoById(v2EditingTaskId);if(ft){ft.followUpAt=follow.getAttribute('data-task-ai-apply-followup');ft.updatedAt=v2Now();save();v2Render();toast('已填入建议跟进时间');}return;}
     var copy=e.target.closest('[data-task-ai-copy-draft]');if(copy){var draft=$('aiDrawerTaskResult').innerText.replace(/^可编辑草稿（不会自动发送）\s*/,'').replace(/复制草稿\s*$/,'').trim();copyText(draft);return;}
   });
-  $('btnReminderCenter').addEventListener('click',function(e){e.stopPropagation();v2ReminderCenterOpen=!v2ReminderCenterOpen;v2MoreOpen=false;var m=$('moreMenu');if(m)m.classList.remove('show');$('btnMore').setAttribute('aria-expanded','false');renderV2ReminderCenter();});
-  $('btnMore').addEventListener('click',function(e){e.stopPropagation();v2MoreOpen=!v2MoreOpen;v2ReminderCenterOpen=false;var c=$('reminderCenter');if(c)c.classList.remove('show');$('btnReminderCenter').setAttribute('aria-expanded','false');var m=$('moreMenu');if(m){m.classList.toggle('show',v2MoreOpen);m.setAttribute('aria-hidden',v2MoreOpen?'false':'true');}this.setAttribute('aria-expanded',v2MoreOpen?'true':'false');});
+  $('btnReminderCenter').addEventListener('click',function(e){e.stopPropagation();var next=!v2ReminderCenterOpen;v2SetMoreOpen(false);v2SetReminderOpen(next);});
+  $('btnMore').addEventListener('click',function(e){e.stopPropagation();var next=!v2MoreOpen;v2SetReminderOpen(false);v2SetMoreOpen(next);});
   (function setupMoreMenu(){var menu=$('moreMenu');if(!menu)return;['btnExport','btnImport','btnLayout'].forEach(function(id){var b=$(id);if(b){b.className='more-item';menu.appendChild(b);}});})();
-  document.addEventListener('click',function(e){if(v2ReminderCenterOpen&&!e.target.closest('.tb-notify-wrap')){v2ReminderCenterOpen=false;renderV2ReminderCenter();}if(v2MoreOpen&&!e.target.closest('.tb-more-wrap')){v2MoreOpen=false;var m=$('moreMenu');if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true');}$('btnMore').setAttribute('aria-expanded','false');}});
-  document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;if($('aiDrawer').classList.contains('show')){closeAIAssistant();return;}if(v2ReminderCenterOpen){v2ReminderCenterOpen=false;renderV2ReminderCenter();return;}if(v2MoreOpen){v2MoreOpen=false;var m=$('moreMenu');if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true');}$('btnMore').setAttribute('aria-expanded','false');}});
+  document.addEventListener('click',function(e){if(v2ReminderCenterOpen&&!e.target.closest('.tb-notify-wrap'))v2SetReminderOpen(false);if(v2MoreOpen&&!e.target.closest('.tb-more-wrap'))v2SetMoreOpen(false);});
   $('v2ReminderTray').addEventListener('click',function(e){var b=e.target.closest('[data-v2-reminder-action]');if(!b)return;var id=b.getAttribute('data-reminder-id'),act=b.getAttribute('data-v2-reminder-action'),t=todoById(id);if(!t)return;if(act==='done'){v2CompleteTask(t,true);v2RemoveReminder(id);save();v2Render();toast('提醒事项已完成');}else if(act==='snooze'){v2Snooze(id,new Date(Date.now()+Number(b.getAttribute('data-minutes')||10)*60000).toISOString());}else if(act==='tomorrow'){var d=new Date();d.setDate(d.getDate()+1);d.setHours(9,0,0,0);v2Snooze(id,d.toISOString());}else if(act==='custom')v2CustomSnooze(id);else if(act==='dismiss')v2RemoveReminder(id);});
-  $('reminderCenter').addEventListener('click',function(e){var open=e.target.closest('[data-v2-reminder-center-open]');if(open){v2OpenTaskModal(open.getAttribute('data-v2-reminder-center-open'),false);v2ReminderCenterOpen=false;renderV2ReminderCenter();return;}var b=e.target.closest('[data-v2-reminder-action]');if(b){v2ReminderAction(b.getAttribute('data-reminder-id'),b.getAttribute('data-v2-reminder-action'),b.getAttribute('data-minutes'));}});
+  $('reminderCenter').addEventListener('click',function(e){var open=e.target.closest('[data-v2-reminder-center-open]');if(open){v2SetReminderOpen(false);v2OpenTaskModal(open.getAttribute('data-v2-reminder-center-open'),false);return;}var b=e.target.closest('[data-v2-reminder-action]');if(b){v2ReminderAction(b.getAttribute('data-reminder-id'),b.getAttribute('data-v2-reminder-action'),b.getAttribute('data-minutes'));}});
 
   setInterval(v2CheckReminders,30000);
   var initialMode=window._pendingV2Mode||'home';if(window._pendingV2Mode)delete window._pendingV2Mode;
