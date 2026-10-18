@@ -2351,12 +2351,24 @@ function ensureInbox(){
 }
 function deleteProject(id){
   var p=projectsById()[id];if(!p)return;
-  if(!confirm('删除项目「'+p.name+'」？其下的待办事项会移到「未分组」，不会删除。'))return;
-  data.projects=data.projects.filter(function(x){return x.id!==id;});
+  var originalData=data,index=data.projects.indexOf(p),originalExpansion=projExpanded[id];
+  var affected=data.todos.filter(function(t){return t.pid===id||t.projectId===id;}).map(function(t){return {id:t.id,pid:t.pid,projectId:t.projectId};});
+  data.projects.splice(index,1);
   data.todos.forEach(function(t){if(t.pid===id||t.projectId===id){t.pid=null;t.projectId=null;}});
   delete projExpanded[id];
-  renderTodos();renderOverview();renderAlert();renderDoneList();save();
-  toast('已删除项目：'+p.name);
+  function refresh(){renderTodos();renderOverview();renderAlert();renderDoneList();renderCal();save();if(window.v2Render)window.v2Render();}
+  refresh();
+  toast('已删除项目：'+p.name+'（相关任务已移到未分组）',{undo:function(){
+    if(data!==originalData){toast('数据已切换，无法撤销');return;}
+    if(data.projects.some(function(x){return x.id===id;})){toast('项目已存在，未重复恢复');return;}
+    data.projects.splice(Math.min(index,data.projects.length),0,p);
+    affected.forEach(function(x){
+      var t=todoById(x.id);
+      if(t&&t.pid==null&&t.projectId==null){t.pid=x.pid;t.projectId=x.projectId;}
+    });
+    if(originalExpansion!==undefined)projExpanded[id]=originalExpansion;
+    refresh();toast('已恢复项目及未重新归属的任务');
+  }});
 }
 function completeProject(id,done){
   var p=projectsById()[id];if(!p)return;
@@ -2550,12 +2562,19 @@ $('todoList').addEventListener('keydown',function(e){
 $('todoText').addEventListener('keydown',function(e){if(e.key==='Enter')$('todoAdd').click();});
 $('todoFilter').addEventListener('input',renderTodos);
 $('clearDone').addEventListener('click',function(){
-  var done=data.todos.filter(function(t){return t.done;});
+  var done=data.todos.map(function(t,i){return {task:t,index:i};}).filter(function(x){return x.task.done;});
   if(!done.length){toast('已办清单为空');return;}
-  if(!confirm('确定清空 '+done.length+' 条已办记录？'))return;
-  data.todos=data.todos.filter(function(t){return !t.done;});
-  renderTodos();renderKanban();renderCal();renderOverview();save();
-  toast('已清空已办清单',{undo:function(){done.forEach(function(t){data.todos.push(t);});rerenderAll();save();}});
+  var sourceData=data,ids=new Set(done.map(function(x){return x.task.id;}));
+  data.todos=data.todos.filter(function(t){return !ids.has(t.id);});
+  renderTodos();renderKanban();renderCal();renderOverview();save();if(window.v2Render)window.v2Render();
+  toast('已清空 '+done.length+' 条已办记录',{undo:function(){
+    if(data!==sourceData){toast('数据已切换，撤销失效');return;}
+    done.forEach(function(x){
+      if(!data.todos.some(function(t){return t.id===x.task.id;}))data.todos.splice(Math.min(x.index,data.todos.length),0,x.task);
+    });
+    rerenderAll();renderCal();save();if(window.v2Render)window.v2Render();
+    toast('已恢复已办记录');
+  }});
 });
 var doneExpanded=true;
 $('doneToggle').addEventListener('click',function(){
@@ -2815,6 +2834,19 @@ $('days').addEventListener('dblclick',function(e){
   var b=e.target.closest('.day');if(!b)return;
   var inp=$('evText');if(inp)inp.focus();
 });
+function wbRemoveCalendarEvent(src,index,target){
+  var list=data.events[src];if(!list||list[index]!==target){toast('日程已发生变化，请重新选择');return;}
+  var sourceData=data,removed=list.splice(index,1)[0];
+  if(!list.length)delete data.events[src];
+  renderCal();renderOverview();save();
+  toast('已删除日程',{undo:function(){
+    if(data!==sourceData){toast('数据已切换，无法撤销');return;}
+    if(!data.events[src])data.events[src]=[];
+    if(data.events[src].indexOf(removed)<0)data.events[src].splice(Math.min(index,data.events[src].length),0,removed);
+    renderCal();renderOverview();save();
+    toast('已恢复日程');
+  }});
+}
 $('evList').addEventListener('click',function(e){
   var cb=e.target.closest('[data-pact="clear-due"]');
   if(cb){
@@ -2832,12 +2864,15 @@ $('evList').addEventListener('click',function(e){
   }
   var b=e.target.closest('button[data-src]');if(!b)return;
   var src=b.getAttribute('data-src'),idx=+b.getAttribute('data-idx'),rep=b.getAttribute('data-rep');
-  if(rep!=='none'&&!confirm('这是重复日程，删除后所有月份/周次的该日程都会消失。确定？'))return;
-  var list=data.events[src];if(!list)return;
-  var removed=list.splice(idx,1)[0];
-  if(!list.length)delete data.events[src];
-  renderCal();renderOverview();save();
-  toast('已删除日程',{undo:function(){if(!data.events[src])data.events[src]=[];data.events[src].splice(Math.min(idx,data.events[src].length),0,removed);renderCal();renderOverview();save();}});
+  var list=data.events[src];if(!list||idx<0||idx>=list.length)return;
+  var target=list[idx];
+  if(rep!=='none'){
+    wbConfirmModal({title:'删除重复日程',message:'这项日程会在所有重复日期中消失。',confirmText:'删除全部重复',danger:true}).then(function(ok){
+      if(ok)wbRemoveCalendarEvent(src,idx,target);
+    });
+    return;
+  }
+  wbRemoveCalendarEvent(src,idx,target);
 });
 $('evText').addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;var v=this.value.trim();if(!v)return;
