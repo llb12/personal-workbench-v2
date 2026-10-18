@@ -9,7 +9,7 @@ assert.equal(process.platform,'win32','Electron smoke test must run on Windows')
 assert.equal(process.env.CI,'true','Electron smoke test requires CI');
 assert.ok(process.env.RUNNER_TEMP,'Missing disposable runner temp directory');
 const scenario=process.env.WB_ELECTRON_SMOKE_CASE||'normal';
-assert.ok(['normal','legacy','corrupt'].includes(scenario),'Invalid smoke scenario');
+assert.ok(['normal','legacy','corrupt','import'].includes(scenario),'Invalid smoke scenario');
 const profile=fs.mkdtempSync(path.join(process.env.RUNNER_TEMP,'personal-workbench-gui-'));
 const legacy={
   schemaVersion:2,
@@ -28,6 +28,10 @@ const legacy={
 const corrupted='{"todos":[{"id":"broken"';
 if(scenario==='legacy')fs.writeFileSync(path.join(profile,'data.json'),JSON.stringify(legacy),'utf8');
 if(scenario==='corrupt')fs.writeFileSync(path.join(profile,'data.json'),corrupted,'utf8');
+if(scenario==='import'){
+  const incoming={schemaVersion:3,todos:[{id:'imported-task',text:'CI Imported Task',title:'CI Imported Task',status:'todo',done:false}],projects:[{id:'import-project',name:'导入项目'}],events:{},inbox:[],workLog:[],note:'导入便签'};
+  fs.writeFileSync(path.join(profile,'import-source.json'),JSON.stringify(incoming),'utf8');
+}
 const electron=require('electron');
 const args=[path.join(__dirname,'electron-smoke.cjs'),'--user-data-dir='+profile,'--no-sandbox','--disable-gpu'];
 const res=spawnSync(electron,args,{
@@ -49,7 +53,18 @@ if(scenario==='corrupt'){
   console.log('P0_ELECTRON_CORRUPT_PASS: invalid data preserved byte-for-byte, no write');
 } else {
   const obj=JSON.parse(current);
-  assert.ok(Array.isArray(obj.todos)&&obj.todos.some(x=>x.text==='CI Desktop Task'),'Task not written to disposable profile');
+  if(scenario==='import'){
+    assert.ok(obj.todos.some(x=>x.id==='imported-task'),'New import task not persisted');
+    assert.ok(!obj.todos.some(x=>x.text==='CI Desktop Task'),'Old task not replaced by import');
+    assert.equal(obj.note,'导入便签');
+    const backups=fs.readdirSync(profile).filter(x=>x.startsWith('data.json.before-import-')&&x.endsWith('.bak'));
+    assert.equal(backups.length,1,'Expected exactly one pre-import backup');
+    const before=JSON.parse(fs.readFileSync(path.join(profile,backups[0]),'utf8'));
+    assert.ok(before.todos.some(x=>x.text==='CI Desktop Task'),'Original task missing from pre-import backup');
+    console.log('P0_ELECTRON_IMPORT_PASS: native import backup, confirmation and replacement persistence');
+  } else {
+    assert.ok(Array.isArray(obj.todos)&&obj.todos.some(x=>x.text==='CI Desktop Task'),'Task not written to disposable profile');
+  }
   if(scenario==='legacy'){
     assert.ok(obj.todos.some(x=>x.id==='legacy-task'),'Legacy task lost');
     assert.ok(obj.projects.some(x=>x.id==='legacy-project'),'Legacy project lost');
