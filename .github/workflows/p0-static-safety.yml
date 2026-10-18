@@ -1,0 +1,107 @@
+name: P0 static safety
+on:
+  push:
+    branches:
+      - codex/p0-stability-20261018
+  pull_request:
+    paths:
+      - index.html
+      - main.js
+      - preload.js
+      - desktop-lifecycle.js
+      - package.json
+      - tests/p0-safety.test.cjs
+      - tests/desktop-lifecycle.test.cjs
+      - tests/p0-package.test.cjs
+      - tests/p0-installers.test.cjs
+      - tests/p0-packaged-portable.test.cjs
+      - tests/p0-installed-nsis.test.cjs
+      - scripts/create-candidate-bundle.cjs
+      - tests/electron-smoke.cjs
+      - tests/run-electron-smoke.cjs
+      - scripts/local-preflight.cjs
+      - .github/workflows/p0-static-safety.yml
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run static and isolated interaction checks
+        run: |
+          node --check main.js
+          node --check preload.js
+          node --check desktop-lifecycle.js
+          node tests/p0-safety.test.cjs
+          node tests/desktop-lifecycle.test.cjs
+          node scripts/local-preflight.cjs
+
+  windows-package:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Electron dependencies in isolated runner
+        run: npm ci --no-audit --no-fund
+      - name: Build unpacked Windows candidate (no release, no signing)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: .\node_modules\.bin\electron-builder.cmd --win --x64 --dir --publish never
+      - name: Inspect Windows package contents
+        run: node tests/p0-package.test.cjs
+      - name: Launch unpacked packaged app in disposable Windows profile
+        run: node tests/p0-packaged-portable.test.cjs unpacked
+      - name: Exercise real Electron window using disposable CI profile
+        run: node tests/run-electron-smoke.cjs
+      - name: Test v2 data migration and persistence in isolated Electron
+        env:
+          WB_ELECTRON_SMOKE_CASE: legacy
+        run: node tests/run-electron-smoke.cjs
+      - name: Test corrupt data read-only protection in isolated Electron
+        env:
+          WB_ELECTRON_SMOKE_CASE: corrupt
+        run: node tests/run-electron-smoke.cjs
+      - name: Test native import, backup and persistence in isolated Electron
+        env:
+          WB_ELECTRON_SMOKE_CASE: import
+        run: node tests/run-electron-smoke.cjs
+      - name: Build unsigned NSIS and portable candidates (no publish)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: .\node_modules\.bin\electron-builder.cmd --win --x64 --publish never
+      - name: Verify installer and portable binaries
+        run: node tests/p0-installers.test.cjs
+      - name: Probe Portable single-file wrapper in disposable Windows profile
+        run: node tests/p0-packaged-portable.test.cjs portable
+      - name: Install NSIS into disposable runner and smoke installed executable
+        run: node tests/p0-installed-nsis.test.cjs
+      - name: Create test-only candidate checksums and handoff
+        if: github.event_name == 'push'
+        run: node scripts/create-candidate-bundle.cjs
+      - name: Retain test candidates for independent review (not a release)
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: P0_Test_Only_${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            release/Personal_Workbench_Setup_*.exe
+            release/Personal_Workbench_Portable_*.exe
+            release/CANDIDATE_README.txt
+            release/SHA256SUMS.txt
+            release/candidate_manifest.json

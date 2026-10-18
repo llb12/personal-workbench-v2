@@ -23,6 +23,7 @@
     "files": [
       "index.html",
       "main.js",
+      "desktop-lifecycle.js",
       "preload.js",
       "ai-adapter.js",
       "package.json"
@@ -30,6 +31,12 @@
     "directories": {
       "output": "release"
     },
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "tray/icon.ico"
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
@@ -44,7 +51,7 @@
       ]
     },
     "nsis": {
-      "artifactName": "${productName} Setup ${version}.${ext}",
+      "artifactName": "Personal_Workbench_Setup_${version}.${ext}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
@@ -59,7 +66,7 @@
       "runAfterFinish": false
     },
     "portable": {
-      "artifactName": "${productName} ${version}.${ext}"
+      "artifactName": "Personal_Workbench_Portable_${version}.${ext}"
     }
   }
 }

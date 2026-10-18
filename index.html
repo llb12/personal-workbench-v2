@@ -1037,6 +1037,15 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-upcoming-row.tbd .v2-date-label{width:63px;color:var(--warn)}
 .dw-unit{color:var(--muted);font-size:11px;margin-left:-6px}
 #aiConfigStatus[data-kind="ok"]{color:var(--ok)}#aiConfigStatus[data-kind="error"]{color:var(--danger)}
+/* P0-1: reusable app-native prompt with inline validation */
+.v2-prompt-modal{max-width:480px}
+.v2-prompt-field{display:flex;flex-direction:column;gap:8px;margin:16px 0 6px;color:var(--text);font-size:13px}
+.v2-prompt-field .inp{width:100%;min-height:38px}
+.v2-prompt-error{min-height:18px;color:var(--danger);font-size:12px;line-height:1.5}
+/* P0-2A: app-native destructive-action confirmation */
+.wb-confirm-modal{max-width:470px}
+.wb-confirm-message{padding:13px 0 18px;white-space:pre-line;line-height:1.6;color:var(--text);font-size:13px}
+.wb-confirm-danger{background:var(--danger)!important;color:white!important;border-color:var(--danger)!important}
 </style>
 
 </head>
@@ -1448,6 +1457,34 @@ body:not(.v2-view) #v2Panel{display:none!important}
   </div>
 </div>
 
+<!-- P0-1: Electron-safe prompt -->
+<div class="v2-modal-mask" id="promptModalMask" aria-hidden="true">
+  <div class="v2-modal v2-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle" aria-describedby="promptModalError" tabindex="-1">
+    <div class="v2-modal-head"><div><h3 id="promptModalTitle">请输入</h3></div><button class="v2-close" id="promptModalClose" type="button" aria-label="关闭">×</button></div>
+    <label class="v2-prompt-field" for="promptModalInput"><span id="promptModalLabel">内容</span><input class="inp" id="promptModalInput" type="text" autocomplete="off"></label>
+    <p class="v2-prompt-error" id="promptModalError" aria-live="polite"></p>
+    <div class="v2-modal-foot"><span>取消不会修改任何内容</span><div><button class="btn-ghost" id="promptModalCancel" type="button">取消</button><button class="btn-primary" id="promptModalConfirm" type="button">确定</button></div></div>
+  </div>
+</div>
+
+<!-- P0-2A: confirmation dialog replaces blocking native confirm -->
+<div class="v2-modal-mask" id="wbConfirmMask" aria-hidden="true">
+  <div class="v2-modal wb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="wbConfirmTitle" aria-describedby="wbConfirmMessage" tabindex="-1">
+    <div class="v2-modal-head"><h3 id="wbConfirmTitle">请确认</h3><button class="v2-close" id="wbConfirmClose" type="button" aria-label="关闭">×</button></div>
+    <p class="wb-confirm-message" id="wbConfirmMessage"></p>
+    <div class="v2-modal-foot"><span id="wbConfirmHint">取消不会修改内容</span><div><button class="btn-ghost" id="wbConfirmCancel" type="button">取消</button><button class="btn-primary" id="wbConfirmAccept" type="button">确定</button></div></div>
+  </div>
+</div>
+
+<!-- P0-2: duplicate task review, explicit three-way decision -->
+<div class="v2-modal-mask" id="wbDecisionMask" aria-hidden="true">
+  <div class="v2-modal wb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="wbDecisionTitle" aria-describedby="wbDecisionMessage" tabindex="-1">
+    <div class="v2-modal-head"><h3 id="wbDecisionTitle">检测到重复任务</h3><button class="v2-close" id="wbDecisionClose" type="button" aria-label="关闭">×</button></div>
+    <p class="wb-confirm-message" id="wbDecisionMessage"></p>
+    <div class="v2-modal-foot"><div><button class="btn-ghost" id="wbDecisionCancel" type="button">取消</button><button class="btn-ghost" id="wbDecisionSkip" type="button">跳过重复项</button><button class="btn-primary" id="wbDecisionForce" type="button">仍然写入</button></div></div>
+  </div>
+</div>
+
 <!-- 统一 AI 工作助手：AI 能力集中在场景化侧栏，不占用首页主工作区 -->
 <div class="ai-drawer-mask" id="aiDrawerMask" aria-hidden="true"></div>
 <aside class="ai-drawer" id="aiDrawer" role="dialog" aria-modal="true" aria-labelledby="aiDrawerTitle" tabindex="-1">
@@ -1478,6 +1515,12 @@ body:not(.v2-view) #v2Panel{display:none!important}
       <div class="dw-row"><label>所在地</label><input class="inp" id="setCity" placeholder="例如：北京市海淀区 / 海淀区 / 北京" autocomplete="off"></div>
       <div class="dw-note">天气会自动定位到你所在的区/县（如「北京市海淀区」）。也可手动填所在区（如海淀区）覆盖自动定位。</div>
       <div class="dw-note">称呼显示在左上角问候；工作台名与一句话显示在左侧栏顶部。都可随意修改。</div>
+    </div>
+    <div class="dw-sec">
+      <h4>Windows 桌面行为</h4>
+      <div class="dw-row"><label for="desktopCloseToTray">点击 × 后保留在系统托盘</label><input id="desktopCloseToTray" type="checkbox" disabled></div>
+      <div class="dw-note" id="desktopStatus" role="status">正在检查系统托盘支持情况…</div>
+      <div class="dw-note">默认点击 × 完全退出；只有手动开启后才会隐藏到系统托盘。右键托盘图标可打开工作台、快速记录或真正退出。窗口位置自动恢复，不读取或修改任务数据。</div>
     </div>
     <div class="dw-sec">
       <h4>外观与背景</h4>
@@ -2046,10 +2089,37 @@ window.addEventListener('beforeunload',function(event){
   event.preventDefault();
   event.returnValue='';
 });
-function toast(m,opts){var t=$('toast');var undo=opts&&opts.undo;
-  t.innerHTML='';t.appendChild(document.createTextNode(m));
-  if(undo){var b=document.createElement('button');b.className='toast-undo';b.textContent='撤销';b.onclick=function(){clearTimeout(t._tm);t.classList.remove('show');undo();};t.appendChild(b);}
-  t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(function(){t.classList.remove('show');},undo?5000:2300);}
+/* P0 safety: do not overwrite the Undo action when unrelated toasts appear. */
+var wbToastUndoQueue=[],wbToastActiveUndo=null;
+function wbToastAdvance(){
+  var t=$('toast');clearTimeout(t._tm);
+  wbToastActiveUndo=wbToastUndoQueue.shift()||null;
+  if(!wbToastActiveUndo){t.classList.remove('show');t.replaceChildren();return;}
+  var current=wbToastActiveUndo;
+  t.replaceChildren(document.createTextNode(current.message));
+  var button=document.createElement('button');
+  button.className='toast-undo';button.textContent='撤销';
+  button.onclick=function(){
+    if(wbToastActiveUndo!==current)return;
+    clearTimeout(t._tm);
+    wbToastActiveUndo=null;
+    try{current.undo();}finally{wbToastAdvance();}
+  };
+  t.appendChild(button);t.classList.add('show');
+  t._tm=setTimeout(function(){if(wbToastActiveUndo===current)wbToastAdvance();},7000);
+}
+function toast(m,opts){
+  var t=$('toast'),undo=opts&&opts.undo;
+  if(typeof undo==='function'){
+    wbToastUndoQueue.push({message:String(m),undo:undo});
+    if(!wbToastActiveUndo)wbToastAdvance();
+    return;
+  }
+  if(wbToastActiveUndo)return; // Preserve the visible, time-limited Undo.
+  t.replaceChildren(document.createTextNode(String(m)));
+  t.classList.add('show');clearTimeout(t._tm);
+  t._tm=setTimeout(function(){if(!wbToastActiveUndo)t.classList.remove('show');},2300);
+}
 function rerenderAll(){renderTodos();renderKanban();renderCal();renderOverview();renderAlert();renderReview();renderFocus();renderBadges();}
 var bannerDismissed=false;
 function checkBackupHint(){
@@ -2323,12 +2393,24 @@ function ensureInbox(){
 }
 function deleteProject(id){
   var p=projectsById()[id];if(!p)return;
-  if(!confirm('删除项目「'+p.name+'」？其下的待办事项会移到「未分组」，不会删除。'))return;
-  data.projects=data.projects.filter(function(x){return x.id!==id;});
+  var originalData=data,index=data.projects.indexOf(p),originalExpansion=projExpanded[id];
+  var affected=data.todos.filter(function(t){return t.pid===id||t.projectId===id;}).map(function(t){return {id:t.id,pid:t.pid,projectId:t.projectId};});
+  data.projects.splice(index,1);
   data.todos.forEach(function(t){if(t.pid===id||t.projectId===id){t.pid=null;t.projectId=null;}});
   delete projExpanded[id];
-  renderTodos();renderOverview();renderAlert();renderDoneList();save();
-  toast('已删除项目：'+p.name);
+  function refresh(){renderTodos();renderOverview();renderAlert();renderDoneList();renderCal();save();if(window.v2Render)window.v2Render();}
+  refresh();
+  toast('已删除项目：'+p.name+'（相关任务已移到未分组）',{undo:function(){
+    if(data!==originalData){toast('数据已切换，无法撤销');return;}
+    if(data.projects.some(function(x){return x.id===id;})){toast('项目已存在，未重复恢复');return;}
+    data.projects.splice(Math.min(index,data.projects.length),0,p);
+    affected.forEach(function(x){
+      var t=todoById(x.id);
+      if(t&&t.pid==null&&t.projectId==null){t.pid=x.pid;t.projectId=x.projectId;}
+    });
+    if(originalExpansion!==undefined)projExpanded[id]=originalExpansion;
+    refresh();toast('已恢复项目及未重新归属的任务');
+  }});
 }
 function completeProject(id,done){
   var p=projectsById()[id];if(!p)return;
@@ -2376,8 +2458,8 @@ $('todoList').addEventListener('click',function(e){
       if(becomingDone)toast('已完成',{undo:function(){t.done=false;t.doneAt=null;rerenderAll();save();}});
     }
     else if(act==='del'){
-      var removed=t;data.todos.splice(i,1);
-      toast('已删除',{undo:function(){data.todos.splice(Math.min(i,data.todos.length),0,removed);rerenderAll();save();}});
+      if(typeof window.wbDeleteTaskSafely!=='function'){toast('删除保护尚未就绪，请重新打开工作台');return;}
+      window.wbDeleteTaskSafely(t.id);return;
     }
     else if(act==='block'){t.blocked=!t.blocked;if(!t.blocked)t.blocker='';}
     else if(act==='focus'){data.focusId=(data.focusId===t.id)?null:t.id;}
@@ -2522,12 +2604,19 @@ $('todoList').addEventListener('keydown',function(e){
 $('todoText').addEventListener('keydown',function(e){if(e.key==='Enter')$('todoAdd').click();});
 $('todoFilter').addEventListener('input',renderTodos);
 $('clearDone').addEventListener('click',function(){
-  var done=data.todos.filter(function(t){return t.done;});
+  var done=data.todos.map(function(t,i){return {task:t,index:i};}).filter(function(x){return x.task.done;});
   if(!done.length){toast('已办清单为空');return;}
-  if(!confirm('确定清空 '+done.length+' 条已办记录？'))return;
-  data.todos=data.todos.filter(function(t){return !t.done;});
-  renderTodos();renderKanban();renderCal();renderOverview();save();
-  toast('已清空已办清单',{undo:function(){done.forEach(function(t){data.todos.push(t);});rerenderAll();save();}});
+  var sourceData=data,ids=new Set(done.map(function(x){return x.task.id;}));
+  data.todos=data.todos.filter(function(t){return !ids.has(t.id);});
+  renderTodos();renderKanban();renderCal();renderOverview();save();if(window.v2Render)window.v2Render();
+  toast('已清空 '+done.length+' 条已办记录',{undo:function(){
+    if(data!==sourceData){toast('数据已切换，撤销失效');return;}
+    done.forEach(function(x){
+      if(!data.todos.some(function(t){return t.id===x.task.id;}))data.todos.splice(Math.min(x.index,data.todos.length),0,x.task);
+    });
+    rerenderAll();renderCal();save();if(window.v2Render)window.v2Render();
+    toast('已恢复已办记录');
+  }});
 });
 var doneExpanded=true;
 $('doneToggle').addEventListener('click',function(){
@@ -2787,6 +2876,19 @@ $('days').addEventListener('dblclick',function(e){
   var b=e.target.closest('.day');if(!b)return;
   var inp=$('evText');if(inp)inp.focus();
 });
+function wbRemoveCalendarEvent(src,index,target){
+  var list=data.events[src];if(!list||list[index]!==target){toast('日程已发生变化，请重新选择');return;}
+  var sourceData=data,removed=list.splice(index,1)[0];
+  if(!list.length)delete data.events[src];
+  renderCal();renderOverview();save();
+  toast('已删除日程',{undo:function(){
+    if(data!==sourceData){toast('数据已切换，无法撤销');return;}
+    if(!data.events[src])data.events[src]=[];
+    if(typeof removed==='string'||data.events[src].indexOf(removed)<0)data.events[src].splice(Math.min(index,data.events[src].length),0,removed);
+    renderCal();renderOverview();save();
+    toast('已恢复日程');
+  }});
+}
 $('evList').addEventListener('click',function(e){
   var cb=e.target.closest('[data-pact="clear-due"]');
   if(cb){
@@ -2799,17 +2901,23 @@ $('evList').addEventListener('click',function(e){
   if(tb){
     var tid=tb.getAttribute('data-todoid'),tact=tb.getAttribute('data-act'),t=todoById(tid);if(!t)return;
     if(tact==='toggle'){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;}
-    else if(tact==='del'){data.todos=data.todos.filter(function(x){return x.id!==tid;});}
+    else if(tact==='del'){
+      if(typeof window.wbDeleteTaskSafely!=='function'){toast('删除保护尚未就绪，请重新打开工作台');return;}
+      window.wbDeleteTaskSafely(tid);return;
+    }
     renderTodos();renderKanban();renderCal();renderOverview();save();return;
   }
   var b=e.target.closest('button[data-src]');if(!b)return;
   var src=b.getAttribute('data-src'),idx=+b.getAttribute('data-idx'),rep=b.getAttribute('data-rep');
-  if(rep!=='none'&&!confirm('这是重复日程，删除后所有月份/周次的该日程都会消失。确定？'))return;
-  var list=data.events[src];if(!list)return;
-  var removed=list.splice(idx,1)[0];
-  if(!list.length)delete data.events[src];
-  renderCal();renderOverview();save();
-  toast('已删除日程',{undo:function(){if(!data.events[src])data.events[src]=[];data.events[src].splice(Math.min(idx,data.events[src].length),0,removed);renderCal();renderOverview();save();}});
+  var list=data.events[src];if(!list||idx<0||idx>=list.length)return;
+  var target=list[idx];
+  if(rep!=='none'){
+    wbConfirmModal({title:'删除重复日程',message:'这项日程会在所有重复日期中消失。',confirmText:'删除全部重复',danger:true}).then(function(ok){
+      if(ok)wbRemoveCalendarEvent(src,idx,target);
+    });
+    return;
+  }
+  wbRemoveCalendarEvent(src,idx,target);
 });
 $('evText').addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;var v=this.value.trim();if(!v)return;
@@ -3032,7 +3140,10 @@ kb.addEventListener('click',function(e){
   else if(act==='restore'){var od=t.done,oda=t.doneAt;t.done=false;t.doneAt=null;toast('已恢复为待办',{undo:function(){t.done=od;t.doneAt=oda;rerenderAll();save();}});}
   else if(act==='defer'){var od=t.due,odf=t.defer,odl=t.lastDefer;t.due=fmt(addDays(today0(),1));t.defer=(t.defer||0)+1;t.lastDefer=fmt(today0());toast('已顺延到明天'+(t.defer>1?'（第 '+t.defer+' 次）':''),{undo:function(){t.due=od;t.defer=odf;t.lastDefer=odl;rerenderAll();save();}});}
   else if(act==='block'){var ob=t.blocked,obr=t.blocker;t.blocked=!t.blocked;if(!t.blocked)t.blocker='';toast(t.blocked?'已标记卡住':'已取消卡住',{undo:function(){t.blocked=ob;t.blocker=obr;rerenderAll();save();}});}
-  else if(act==='del'){var idx=data.todos.indexOf(t);data.todos=data.todos.filter(function(x){return x.id!==id;});toast('已删除',{undo:function(){data.todos.splice(Math.min(idx,data.todos.length),0,t);rerenderAll();save();}});}
+  else if(act==='del'){
+    if(typeof window.wbDeleteTaskSafely!=='function'){toast('删除保护尚未就绪，请重新打开工作台');return;}
+    window.wbDeleteTaskSafely(id);return;
+  }
   else return;
   renderTodos();renderKanban();renderAlert();renderReview();save();
 });
@@ -3215,35 +3326,193 @@ function validateBrowserImport(obj){
   if(obj.events!==undefined&&(!obj.events||typeof obj.events!=='object'||Array.isArray(obj.events)))return 'events 必须是对象';
   return '';
 }
+function wbCountEvents(events){
+  if(!events||typeof events!=='object')return 0;
+  return Object.keys(events).reduce(function(n,key){return n+(Array.isArray(events[key])?events[key].length:0);},0);
+}
 function applyImported(obj){
-  if(!dataReady()){toast('数据尚未成功加载，已保护原数据');return;}
+  if(!dataReady()){wbErrorModal('导入已暂停','数据尚未成功加载，已保护原数据。');return;}
   var invalid=validateBrowserImport(obj);
-  if(invalid){alert('导入失败：'+invalid+'\n原有数据未改动。');return;}
-  if(!confirm('导入将覆盖当前全部数据，确定继续？'))return;
+  if(invalid){wbErrorModal('导入失败',invalid+'\n原有数据未改动。');return;}
   var previous=data;
-  data=normalize(obj);applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();autoDefer();renderCore();
-  save(true).then(function(result){
-    if(result&&result.ok){toast('导入成功，数据已恢复');return;}
-    data=previous;applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();renderCore();
-    alert('导入后的数据未能保存，已恢复导入前的界面数据。');
+  var beforeConfirmSnapshot=JSON.stringify(data);
+  var currentCount='当前：'+data.todos.length+' 项任务、'+data.projects.length+' 个项目、'+wbCountEvents(data.events)+' 条日程';
+  var incomingCount='导入：'+(obj.todos||[]).length+' 项任务、'+(obj.projects||[]).length+' 个项目、'+wbCountEvents(obj.events)+' 条日程';
+  wbConfirmModal({
+    title:'覆盖并导入',
+    message:currentCount+'\n'+incomingCount+'\n\n导入将覆盖当前全部数据。Electron 模式会先在本地保留导入前备份。',
+    confirmText:'覆盖并导入',danger:true
+  }).then(function(ok){
+    if(!ok)return;
+    if(data!==previous||JSON.stringify(data)!==beforeConfirmSnapshot){
+      wbErrorModal('导入已取消','当前数据在确认期间发生变化，请先保存现有内容，再重新选择备份文件。');
+      return;
+    }
+    data=normalize(obj);applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();autoDefer();renderCore();
+    save(true).then(function(result){
+      if(result&&result.ok){toast('导入成功，数据已恢复');if(window.v2Render)window.v2Render();return;}
+      data=previous;applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();renderCore();
+      if(window.v2Render)window.v2Render();
+      wbErrorModal('保存导入数据失败','已恢复导入前的界面数据。请保留导入前备份并检查磁盘状态。');
+    }).catch(function(error){
+      data=previous;applyTheme(data.theme);applyAccent(data.accent);applyProfile();bindAll();renderCore();
+      if(window.v2Render)window.v2Render();
+      wbErrorModal('保存导入数据失败','已尝试恢复导入前的界面数据：'+String(error&&error.message||'未知错误'));
+    });
   });
 }
 $('btnImport').addEventListener('click',function(){
-  if(!dataReady()){toast('数据尚未成功加载，已暂停导入导出');return;}
-  if(HAS_API){window.api.importData().then(function(r){if(!r)return;if(r.error){alert(r.error+'\n原有数据未改动。');return;}applyImported(r.data);}).catch(function(){alert('导入失败：无法读取所选文件。\n原有数据未改动。');});return;}
+  if(!dataReady()){wbErrorModal('导入已暂停','数据尚未成功加载，已保护原数据。');return;}
+  if(HAS_API){
+    // Flush newest edits before main.js creates its existing on-disk .before-import backup.
+    save(true).then(function(saved){
+      if(!saved||!saved.ok){wbErrorModal('导入已暂停','当前数据尚未安全保存：'+String(saved&&saved.error||'未知错误'));return;}
+      return window.api.importData().then(function(r){
+        if(!r)return;
+        if(r.error){wbErrorModal('导入失败',r.error+'\n原有数据未改动。');return;}
+        applyImported(r.data);
+      });
+    }).catch(function(error){wbErrorModal('导入失败','无法读取所选文件：'+String(error&&error.message||'未知错误')+'\n原有数据未改动。');});
+    return;
+  }
   $('fileInput').click();
 });
 $('fileInput').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var fr=new FileReader();
-  fr.onload=function(){try{applyImported(JSON.parse(fr.result));}catch(e){alert('导入失败：文件不是有效 JSON。\n原有数据未改动。');}};fr.readAsText(f,'utf-8');this.value='';});
+  fr.onload=function(){try{applyImported(JSON.parse(fr.result));}catch(e){wbErrorModal('导入失败','文件不是有效 JSON。\n原有数据未改动。');}};fr.readAsText(f,'utf-8');this.value='';});
 $('bannerClose').addEventListener('click',function(){bannerDismissed=true;$('banner').classList.remove('show');});
 
-/* ===== 快捷键 ===== */
+/* P0-4: one Escape dispatcher. The stack tracks actual opening order. */
+var wbOverlayStack=[];
+function wbOverlayPush(id,close,isOpen){
+  wbOverlayDrop(id);
+  wbOverlayStack.push({id:id,close:close,isOpen:isOpen});
+}
+function wbOverlayDrop(id){
+  for(var i=wbOverlayStack.length-1;i>=0;i--)if(wbOverlayStack[i].id===id)wbOverlayStack.splice(i,1);
+}
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){if(document.activeElement)document.activeElement.blur();return;}
-  if(!e.ctrlKey&&!e.metaKey)return;
-  var map={1:'todoText',2:'evText',3:'note'};var k=String(e.key).toLowerCase();
-  if(k==='4'){e.preventDefault();var i=$('todoText');if(i)i.focus();return;}
-  if(map[k]){e.preventDefault();var el=$(map[k]);if(el)el.focus();}
+  if(e.key!=='Escape'||e.isComposing===true||e.keyCode===229||e.which===229)return;
+  while(wbOverlayStack.length){
+    var top=wbOverlayStack[wbOverlayStack.length-1];
+    if(top.isOpen&&!top.isOpen()){wbOverlayStack.pop();continue;}
+    e.preventDefault();e.stopImmediatePropagation();
+    top.close();
+    return;
+  }
+},true);
+
+/* P0-2A: one outstanding confirm, explicit focus restoration and scoped Escape. */
+var wbConfirmActive=null;
+function wbConfirmFinish(accepted){
+  if(!wbConfirmActive)return;
+  var pending=wbConfirmActive;wbConfirmActive=null;
+  wbOverlayDrop('confirm');
+  var mask=$('wbConfirmMask');mask.classList.remove('show');mask.setAttribute('aria-hidden','true');
+  var target=pending.returnFocus;
+  if(target&&document.contains(target))setTimeout(function(){target.focus();},20);
+  pending.resolve(!!accepted);
+}
+function wbConfirmModal(options){
+  if(wbConfirmActive)return Promise.resolve(false);
+  var opts=options||{},mask=$('wbConfirmMask'),yes=$('wbConfirmAccept');
+  $('wbConfirmTitle').textContent=String(opts.title||'请确认');
+  $('wbConfirmMessage').textContent=String(opts.message||'');
+  yes.textContent=String(opts.confirmText||(opts.notice?'知道了':'确定'));
+  yes.classList.toggle('wb-confirm-danger',opts.danger===true);
+  $('wbConfirmCancel').style.display=opts.notice?'none':'';
+  $('wbConfirmHint').textContent=opts.notice?'请阅读提示后关闭':'取消不会修改内容';
+  return new Promise(function(resolve){
+    wbConfirmActive={resolve:resolve,returnFocus:document.activeElement};
+    mask.classList.add('show');mask.setAttribute('aria-hidden','false');
+    wbOverlayPush('confirm',function(){wbConfirmFinish(false);},function(){return mask.classList.contains('show');});
+    setTimeout(function(){if(wbConfirmActive)$(opts.notice?'wbConfirmAccept':'wbConfirmCancel').focus();},15);
+  });
+}
+$('wbConfirmClose').addEventListener('click',function(){wbConfirmFinish(false);});
+$('wbConfirmCancel').addEventListener('click',function(){wbConfirmFinish(false);});
+$('wbConfirmAccept').addEventListener('click',function(){wbConfirmFinish(true);});
+$('wbConfirmMask').addEventListener('click',function(e){if(e.target===this)wbConfirmFinish(false);});
+function wbErrorModal(title,message){return wbConfirmModal({title:title||'操作失败',message:String(message||'请检查后重试'),notice:true});}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Tab'||!wbConfirmActive||!wbOverlayStack.length||wbOverlayStack[wbOverlayStack.length-1].id!=='confirm')return;
+  var nodes=Array.from($('wbConfirmMask').querySelectorAll('button:not([disabled])')).filter(function(el){
+    return el.style.display!=='none'&&!el.hidden&&(el.offsetWidth>0||el.offsetHeight>0||el.getClientRects().length>0);
+  });
+  if(!nodes.length)return;
+  var idx=nodes.indexOf(document.activeElement);
+  if(idx<0){e.preventDefault();(e.shiftKey?nodes[nodes.length-1]:nodes[0]).focus();return;}
+  var next=idx+(e.shiftKey?-1:1);
+  if(next<0||next>=nodes.length){e.preventDefault();nodes[(next+nodes.length)%nodes.length].focus();}
+},true);
+
+/* P0-2: skip/insert/cancel without a browser confirm dialog. */
+var wbDecisionActive=null;
+function wbDecisionFinish(choice){
+  if(!wbDecisionActive)return;
+  var pending=wbDecisionActive;wbDecisionActive=null;
+  wbOverlayDrop('decision');
+  var mask=$('wbDecisionMask');mask.classList.remove('show');mask.setAttribute('aria-hidden','true');
+  if(pending.returnFocus&&document.contains(pending.returnFocus))setTimeout(function(){pending.returnFocus.focus();},20);
+  pending.resolve(choice);
+}
+function wbDecisionModal(options){
+  if(wbDecisionActive)return Promise.resolve('cancel');
+  var opts=options||{},mask=$('wbDecisionMask');
+  $('wbDecisionTitle').textContent=String(opts.title||'检测到重复任务');
+  $('wbDecisionMessage').textContent=String(opts.message||'请选择后续操作。');
+  return new Promise(function(resolve){
+    wbDecisionActive={resolve:resolve,returnFocus:document.activeElement};
+    mask.classList.add('show');mask.setAttribute('aria-hidden','false');
+    wbOverlayPush('decision',function(){wbDecisionFinish('cancel');},function(){return mask.classList.contains('show');});
+    setTimeout(function(){if(wbDecisionActive)$('wbDecisionCancel').focus();},15);
+  });
+}
+$('wbDecisionCancel').addEventListener('click',function(){wbDecisionFinish('cancel');});
+$('wbDecisionClose').addEventListener('click',function(){wbDecisionFinish('cancel');});
+$('wbDecisionSkip').addEventListener('click',function(){wbDecisionFinish('skip');});
+$('wbDecisionForce').addEventListener('click',function(){wbDecisionFinish('insert');});
+$('wbDecisionMask').addEventListener('click',function(e){if(e.target===this)wbDecisionFinish('cancel');});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Tab'||!wbDecisionActive||!wbOverlayStack.length||wbOverlayStack[wbOverlayStack.length-1].id!=='decision')return;
+  var nodes=Array.from($('wbDecisionMask').querySelectorAll('button:not([disabled])'));
+  var idx=nodes.indexOf(document.activeElement);if(!nodes.length)return;
+  if(idx<0){e.preventDefault();(e.shiftKey?nodes[nodes.length-1]:nodes[0]).focus();return;}
+  var next=idx+(e.shiftKey?-1:1);
+  if(next<0||next>=nodes.length){e.preventDefault();nodes[(next+nodes.length)%nodes.length].focus();}
+},true);
+
+/* P0-3: central shortcuts, no hidden legacy input targets. */
+var WB_SHORTCUT_PAGES=['home','inbox','tasks','projects','calendar','records'];
+document.addEventListener('keydown',function(e){
+  if(e.isComposing===true||e.keyCode===229||e.which===229)return;
+  var key=String(e.key||'').toLowerCase();
+  var modifier=(e.ctrlKey||e.metaKey)&&!e.altKey;
+  if(modifier){
+    if(!e.shiftKey&&key==='k'){
+      e.preventDefault();
+      if(!$('cmdkMask').classList.contains('show'))cmdkOpenFn();
+      return;
+    }
+    if(!e.shiftKey&&/^[1-6]$/.test(key)){
+      e.preventDefault();var target=WB_SHORTCUT_PAGES[Number(key)-1];
+      if(typeof window.v2Navigate==='function')window.v2Navigate(target);
+      else switchView(target);
+      return;
+    }
+    if(key==='n'){
+      e.preventDefault();
+      if(e.shiftKey){if(window.v2OpenQuickRecord)window.v2OpenQuickRecord();}
+      else if(window.v2OpenNewTask)window.v2OpenNewTask();
+      return;
+    }
+    return;
+  }
+  if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||key!=='/')return;
+  var node=e.target;
+  if(node&&((node.isContentEditable)||/^(INPUT|TEXTAREA|SELECT)$/i.test(node.tagName||'')||(node.closest&&node.closest('[contenteditable="true"]'))))return;
+  if(wbOverlayStack.length)return;
+  var search=$('v2TaskSearch');
+  if(search&&search.getClientRects().length){e.preventDefault();search.focus();}
 });
 
 /* ===== 模块展开全屏 ===== */
@@ -3257,6 +3526,7 @@ function expandModule(id){
   $('expBody').appendChild(card);
   $('expanded').classList.add('show');
   expandedModule=id;
+  wbOverlayPush('legacy-expanded',collapseModule,function(){return !!expandedModule;});
   if(id==='cardKanban'){renderKanban();}
   else if(id==='cardCal')renderCal();
   else if(id==='cardTodo')renderTodos();
@@ -3265,6 +3535,7 @@ function expandModule(id){
 }
 function collapseModule(){
   if(!expandedModule)return;
+  wbOverlayDrop('legacy-expanded');
   var card=$(expandedModule);
   $('expanded').classList.remove('show');
   if(cardHome&&cardHome.parent)cardHome.parent.insertBefore(card,cardHome.next);
@@ -3276,7 +3547,6 @@ function collapseModule(){
   expandedModule=null;cardHome=null;
 }
 $('expBack').addEventListener('click',collapseModule);
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&expandedModule)collapseModule();});
 ['cardTodo','cardCal','cardNote','cardKanban','cardReview'].forEach(function(id){
   var card=$(id);if(!card)return;
   var hd=card.querySelector('.card-hd');
@@ -3467,10 +3737,18 @@ function enterLayout(on){
 var bL=document.getElementById('btnLayout');if(bL)bL.addEventListener('click',function(){enterLayout(!document.body.classList.contains('editing'));});
 var dL=document.getElementById('doneLayout');if(dL)dL.addEventListener('click',function(){enterLayout(false);});
 var rL=document.getElementById('resetLayout');if(rL)rL.addEventListener('click',function(){
-  if(!confirm('将恢复默认布局（五张卡片全部显示、位置尺寸复原）。确定？'))return;
-  data.layout=null;
-  LAYOUT_IDS.forEach(function(id){var c=$(id);if(c)c.classList.remove('off');});
-  applyLayout();save();renderBadges();toast('布局已重置为默认');
+  var sourceData=data,previousLayout=data.layout;
+  wbConfirmModal({title:'恢复默认布局',message:'五张卡片将恢复默认位置和尺寸，任务及日程数据不受影响。',confirmText:'恢复默认'}).then(function(ok){
+    if(!ok||data!==sourceData)return;
+    data.layout=null;
+    LAYOUT_IDS.forEach(function(id){var c=$(id);if(c)c.classList.remove('off');});
+    applyLayout();save();renderBadges();
+    toast('布局已重置为默认',{undo:function(){
+      if(data!==sourceData||data.layout!==null){toast('布局已再次更改，撤销失效');return;}
+      data.layout=previousLayout;applyLayout();save();renderBadges();
+      toast('已恢复之前的布局');
+    }});
+  });
 });
 
 /* 左侧栏导航：首页 / 各模块全屏 */
@@ -3741,6 +4019,22 @@ function syncBgUI(){
 
 /* 设置抽屉 */
 var drawerReturnFocus=null;
+function wbDesktopAPI(){return window.workbench&&window.workbench.desktop||null;}
+function wbRefreshDesktopSettings(){
+  var desktop=wbDesktopAPI(),box=$('desktopCloseToTray'),status=$('desktopStatus');
+  if(!box||!status)return;
+  box.disabled=true;
+  if(!desktop||typeof desktop.getSettings!=='function'){
+    box.checked=false;status.textContent='当前不是支持系统托盘的 Windows 桌面环境';return;
+  }
+  desktop.getSettings().then(function(result){
+    box.disabled=!result||!result.trayAvailable;
+    box.checked=!!(result&&result.closeToTray);
+    status.textContent=result&&result.trayAvailable?'系统托盘可用；当前按上方开关决定关闭行为':'托盘不可用；点击 × 仍将正常退出';
+  }).catch(function(){
+    box.checked=false;box.disabled=true;status.textContent='桌面设置读取失败，已保持原有退出行为';
+  });
+}
 function openDrawer(){
   drawerReturnFocus=document.activeElement;
   var p=data.profile||{};
@@ -3751,22 +4045,37 @@ function openDrawer(){
   syncBgUI();
   syncThemeUI();syncAccentUI();
   loadAIConfigUI();
+  wbRefreshDesktopSettings();
   var dr=document.getElementById('drawer');if(dr)dr.classList.add('show');
+  wbOverlayPush('settings',closeDrawer,function(){return !!dr&&dr.classList.contains('show');});
   var dm=document.getElementById('drawerMask');if(dm){dm.classList.add('show');dm.setAttribute('aria-hidden','false');}
   setTimeout(function(){if(dr)dr.focus();},20);
 }
 function closeDrawer(){
+  wbOverlayDrop('settings');
   var dr=document.getElementById('drawer');if(dr)dr.classList.remove('show');
   var dm=document.getElementById('drawerMask');if(dm){dm.classList.remove('show');dm.setAttribute('aria-hidden','true');}
   var target=drawerReturnFocus;drawerReturnFocus=null;
   if(target&&document.contains(target))setTimeout(function(){target.focus();},20);
 }
+var wbTrayBox=$('desktopCloseToTray');
+if(wbTrayBox)wbTrayBox.addEventListener('change',function(){
+  var desktop=wbDesktopAPI(),box=this,status=$('desktopStatus');
+  if(!desktop||typeof desktop.setSettings!=='function'){box.checked=false;box.disabled=true;return;}
+  var wanted=box.checked;box.disabled=true;
+  desktop.setSettings({closeToTray:wanted}).then(function(result){
+    if(!result||!result.ok){
+      wbRefreshDesktopSettings();
+      if(status)status.textContent=result&&result.error||'桌面设置保存失败';
+      return;
+    }
+    wbRefreshDesktopSettings();
+    toast(wanted?'已开启：关闭窗口时保留在系统托盘':'已关闭：点击 × 将完全退出');
+  }).catch(function(){wbRefreshDesktopSettings();if(status)status.textContent='保存桌面设置失败，请重试';});
+});
 var bS=document.getElementById('btnSettings');if(bS)bS.addEventListener('click',openDrawer);
 var dC=document.getElementById('drawerClose');if(dC)dC.addEventListener('click',closeDrawer);
 var dM=document.getElementById('drawerMask');if(dM)dM.addEventListener('click',closeDrawer);
-document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'&&$('drawer').classList.contains('show')){e.preventDefault();closeDrawer();}
-});
 ['setName','setWsName','setWsSub','setCity'].forEach(function(id){
   var el=document.getElementById(id);if(!el)return;
   el.addEventListener('input',function(){var v=this.value;var p=data.profile;
@@ -3798,8 +4107,10 @@ var aiTest=document.getElementById('aiTestConnection');if(aiTest)aiTest.addEvent
 });
 var aiClear=document.getElementById('aiClearKey');if(aiClear)aiClear.addEventListener('click',function(){
   var ai=aiBridge();if(!ai)return;
-  if(!confirm('清除已保存的 API Key？'))return;
-  ai.clearKey().then(function(r){if(r&&r.ok){document.getElementById('aiApiKey').value='';renderAIConfigUI(r.config);toast('API Key 已清除');}else setAIConfigStatus('API Key 清除失败','error');}).catch(function(){setAIConfigStatus('API Key 清除失败','error');});
+  wbConfirmModal({title:'清除 API Key',message:'确定清除已保存的 API Key？',confirmText:'清除密钥',danger:true}).then(function(ok){
+    if(!ok)return;
+    ai.clearKey().then(function(r){if(r&&r.ok){document.getElementById('aiApiKey').value='';renderAIConfigUI(r.config);toast('API Key 已清除');}else setAIConfigStatus('API Key 清除失败','error');}).catch(function(){setAIConfigStatus('API Key 清除失败','error');});
+  });
 });
 
 /* 背景换肤：上传图片 + 清除 */
@@ -3830,12 +4141,29 @@ var bgLive=document.getElementById('bgLivePreview');if(bgLive)bgLive.addEventLis
 buildBgGrid();
 
 function clearSamples(){
-  if(!confirm('将移除演示用的示例待办 / 日程 / 便签，你自己的数据不受影响。确定？'))return;
+  var originalData=data;
+  var tasks=data.todos.map(function(t,i){return {entry:t,index:i};}).filter(function(x){return x.entry.sample;});
+  var events=[];
+  Object.keys(data.events).forEach(function(k){(data.events[k]||[]).forEach(function(e,i){if(e&&e.sample)events.push({day:k,entry:e,index:i});});});
+  var originalNote=data.note,hadNote=!!data.noteSample;
+  if(!tasks.length&&!events.length&&!hadNote){toast('没有需要清理的示例数据');return;}
   data.todos=data.todos.filter(function(t){return !t.sample;});
   Object.keys(data.events).forEach(function(k){data.events[k]=data.events[k].filter(function(e){return !e.sample;});if(!data.events[k].length)delete data.events[k];});
-  if(data.noteSample){data.note='';data.noteSample=false;}
-  renderTodos();renderCal();renderKanban();renderOverview();renderAlert();renderReview();applyProfile();save();
-  toast('已清除示例数据');
+  if(hadNote){data.note='';data.noteSample=false;}
+  function refresh(){renderTodos();renderCal();renderKanban();renderOverview();renderAlert();renderReview();applyProfile();save();if(window.v2Render)window.v2Render();}
+  refresh();
+  toast('已移除示例数据',{undo:function(){
+    if(data!==originalData){toast('数据已切换，撤销失效');return;}
+    tasks.forEach(function(x){
+      if(!data.todos.some(function(t){return t.id===x.entry.id;}))data.todos.splice(Math.min(x.index,data.todos.length),0,x.entry);
+    });
+    events.forEach(function(x){
+      if(!data.events[x.day])data.events[x.day]=[];
+      if(data.events[x.day].indexOf(x.entry)<0)data.events[x.day].splice(Math.min(x.index,data.events[x.day].length),0,x.entry);
+    });
+    if(hadNote&&!data.note&&!data.noteSample){data.note=originalNote;data.noteSample=true;}
+    refresh();toast('已恢复示例数据');
+  }});
 }
 
 /* ===== 命令面板 Ctrl+K ===== */
@@ -3850,6 +4178,7 @@ function cmdkBuild(q){
   items.push({t:'动作',n:'切换深色 / 浅色',run:function(){setTheme(data.theme==='dark'?'light':'dark');}});
   items.push({t:'动作',n:'导出备份',run:function(){$('btnExport').click();}});
   items.push({t:'动作',n:'打开设置',run:function(){openDrawer();}});
+  items.push({t:'帮助',n:'快捷键一览',run:function(){wbConfirmModal({title:'快捷键一览',message:'Ctrl+K：命令面板\nCtrl+1～6：首页 / 收件箱 / 任务 / 项目 / 日历 / 工作记录\nCtrl+N：新建任务\nCtrl+Shift+N：快速记录\n/：聚焦任务搜索\nEsc：关闭最上层弹窗',notice:true});}});
   items.push({t:'AI',n:'问问工作台',run:function(){if(window.openAIAssistant)window.openAIAssistant();setTimeout(function(){var q=$('aiDrawerQuery');if(q)q.focus();},60);}});
   items.push({t:'动作',n:'布局编辑',run:function(){enterLayout(!document.body.classList.contains('editing'));}});
   items.push({t:'动作',n:'导入薪酬节点模板',run:function(){var b=$('btnPayTemplate');if(b)b.click();}});
@@ -3881,11 +4210,13 @@ function cmdkRender(){
 function cmdkOpenFn(){
   cmdkReturnFocus=document.activeElement;
   $('cmdkMask').classList.add('show');
+  wbOverlayPush('command',function(){cmdkClose();},function(){return $('cmdkMask').classList.contains('show');});
   cmdkItems=cmdkBuild('');cmdkSel=0;cmdkRender();
   $('cmdkInput').value='';
   setTimeout(function(){$('cmdkInput').focus();},30);
 }
 function cmdkClose(restore){
+  wbOverlayDrop('command');
   $('cmdkMask').classList.remove('show');
   var target=cmdkReturnFocus;cmdkReturnFocus=null;
   if(restore!==false&&target&&document.contains(target))setTimeout(function(){target.focus();},20);
@@ -3900,27 +4231,32 @@ $('cmdkInput').addEventListener('keydown',function(e){
 $('cmdkList').addEventListener('click',function(e){var b=e.target.closest('.cmdk-item');if(b)cmdkRun(+b.getAttribute('data-i'));});
 $('cmdkMask').addEventListener('click',function(e){if(e.target===this)cmdkClose();});
 var bCk=document.getElementById('btnCmdk');if(bCk)bCk.addEventListener('click',cmdkOpenFn);
-document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){e.preventDefault();cmdkOpenFn();return;}
-  if(e.key==='Escape'&&$('cmdkMask').classList.contains('show')){cmdkClose();}
-});
 
 /* ===== 薪酬节点一键模板 ===== */
 var bPT=document.getElementById('btnPayTemplate');
 if(bPT)bPT.addEventListener('click',function(e){
   e.stopPropagation();
-  if(!confirm('将导入每月重复的薪酬节点日程：工资发放日(10日)、个税扣缴申报截止(15日)、社保公积金缴纳(20日)。已存在的同名日程自动跳过。继续？'))return;
+  var sourceData=data,created=[];
   var t=new Date(),y=t.getFullYear(),m=t.getMonth(),added=0;
   [['10','工资发放日'],['15','个税扣缴申报截止'],['20','社保公积金缴纳']].forEach(function(p){
     var exist=Object.keys(data.events).some(function(k){return (data.events[k]||[]).some(function(ev){return ev.text===p[1];});});
     if(exist)return;
     var key=y+'-'+pad(m+1)+'-'+p[0];
     if(!data.events[key])data.events[key]=[];
-    data.events[key].push({text:p[1],repeat:'monthly',sample:false});
+    var event={text:p[1],repeat:'monthly',sample:false};
+    data.events[key].push(event);created.push({key:key,event:event});
     added++;
   });
   renderCal();renderOverview();renderBadges();save();
-  toast(added?('已导入 '+added+' 个薪酬节点（每月重复）'):'薪酬节点已存在，无需导入');
+  toast(added?('已导入 '+added+' 个薪酬节点（每月重复）'):'薪酬节点已存在，无需导入',added?{undo:function(){
+    if(data!==sourceData){toast('数据已切换，撤销失效');return;}
+    created.forEach(function(x){
+      var list=data.events[x.key];if(!list)return;
+      var index=list.indexOf(x.event);if(index>=0)list.splice(index,1);
+      if(!list.length)delete data.events[x.key];
+    });
+    renderCal();renderOverview();renderBadges();save();toast('已撤销本次薪酬节点导入');
+  }}:undefined);
 });
 
 /* ===== 周小结一键生成 ===== */
@@ -4107,7 +4443,16 @@ $('corePanel').addEventListener('click',function(e){
   else if(action==='down'&&t){coreMoveTask(id,1);return;}
   else if(action==='block'&&t){
     if(t.blocked){t.blocked=false;t.blocker='';}
-    else{var reason=prompt('请填写卡点（可留空）：',t.blocker||'');if(reason===null)return;t.blocked=true;t.blocker=reason.trim();}
+    else{
+      if(typeof window.v2PromptModal!=='function'){toast('输入窗口尚未准备好');return;}
+      window.v2PromptModal({title:'记录卡点',label:'请填写卡点（可留空）',type:'text',defaultValue:t.blocker||''}).then(function(reason){
+        if(reason===null)return;
+        var current=todoById(id);if(!current)return;
+        current.blocked=true;current.blocker=reason.trim();
+        rerenderAll();renderCore();save();
+      });
+      return;
+    }
   }else if(action==='add-project'){
     var input=$('coreNewProject');if(input&&addProject(input.value,false,null)){input.value='';renderCore();}
     return;
@@ -4573,18 +4918,31 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function v2DeleteInboxEntry(entry){
     if(!entry||!v2InboxProcessedKind(entry))return;
-    if(!confirm('本次只删除收件箱原始记录，不会删除已生成任务。\n确认删除这条已处理记录吗？'))return;
-    data.inbox=(data.inbox||[]).filter(function(x){return x.id!==entry.id;});
-    if(v2InboxActiveId===entry.id)v2InboxActiveId=null;
-    save();v2Render();toast('已删除收件箱原始记录，正式任务未受影响');
+    var originalData=data,index=(data.inbox||[]).indexOf(entry),wasActive=v2InboxActiveId===entry.id;
+    if(index<0)return;
+    data.inbox.splice(index,1);
+    if(wasActive)v2InboxActiveId=null;
+    save();v2Render();
+    toast('已删除已处理记录，正式任务未受影响',{undo:function(){
+      if(data!==originalData){toast('数据已切换，撤销失效');return;}
+      if(!v2FindInbox(entry.id))data.inbox.splice(Math.min(index,data.inbox.length),0,entry);
+      if(wasActive&&!v2InboxActiveId)v2InboxActiveId=entry.id;
+      save();v2Render();toast('已恢复收件箱记录');
+    }});
   }
   function v2ClearIgnoredInbox(){
-    var count=(data.inbox||[]).filter(function(x){return x.status==='ignored';}).length;
-    if(!count){toast('没有已忽略的收件箱记录');return;}
-    if(!confirm('将删除全部已忽略的收件箱原始记录。\n未整理记录、正式任务、项目、工作记录和等待事项不会受影响。\n确定继续？'))return;
-    var active=v2InboxActiveId;data.inbox=(data.inbox||[]).filter(function(x){return x.status!=='ignored';});
+    var originalData=data,removed=(data.inbox||[]).map(function(x,i){return {entry:x,index:i};}).filter(function(x){return x.entry.status==='ignored';});
+    if(!removed.length){toast('没有已忽略的收件箱记录');return;}
+    var active=v2InboxActiveId;
+    data.inbox=data.inbox.filter(function(x){return x.status!=='ignored';});
     if(active&&!v2FindInbox(active))v2InboxActiveId=null;
-    save();v2Render();toast('已清理 '+count+' 条已忽略记录');
+    save();v2Render();
+    toast('已清理 '+removed.length+' 条已忽略记录',{undo:function(){
+      if(data!==originalData){toast('数据已切换，撤销失效');return;}
+      removed.forEach(function(x){if(!v2FindInbox(x.entry.id))data.inbox.splice(Math.min(x.index,data.inbox.length),0,x.entry);});
+      if(active&&!v2InboxActiveId)v2InboxActiveId=active;
+      save();v2Render();toast('已恢复已忽略记录');
+    }});
   }
   function renderV2Inbox(){
     v2Header('收件箱','先保留原文，再把明确事项整理成可确认的任务。');
@@ -4615,12 +4973,29 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function v2ConfirmInbox(entry){
     if(!entry||entry.status!=='candidate')return;
+    var sourceData=data,sourceId=entry.id;
     var duplicates=(entry.candidates||[]).filter(function(c){return c.selected!==false&&c.category!=='ignore';}).map(v2FindDuplicateTask).filter(Boolean);
-    if(duplicates.length&&!confirm('发现 '+duplicates.length+' 项可能与已有任务重复。继续写入新任务吗？\n\n已有任务不会被修改或删除。'))return;
-    var added=0;
-    (entry.candidates||[]).forEach(function(c){if(c.selected===false||c.category==='ignore')return;if(v2CreateTaskFromCandidate(entry,c))added++;});
-    if(!added){toast('没有选中可写入的候选项');return;}
-    entry.status='converted';entry.updatedAt=v2Now();save();v2Render();toast('已写入 '+added+' 项任务，原始内容仍保留在收件箱');
+    function commit(skipDuplicates){
+      if(data!==sourceData)return;
+      var current=v2FindInbox(sourceId);if(!current||current.status!=='candidate')return;
+      var added=0;
+      (current.candidates||[]).forEach(function(c){
+        if(c.selected===false||c.category==='ignore')return;
+        if(skipDuplicates&&v2FindDuplicateTask(c))return;
+        if(v2CreateTaskFromCandidate(current,c))added++;
+      });
+      if(!added){toast('没有选中可写入的非重复候选项');return;}
+      current.status='converted';current.updatedAt=v2Now();save();v2Render();
+      toast('已写入 '+added+' 项任务，原始内容仍保留在收件箱');
+    }
+    if(duplicates.length){
+      wbDecisionModal({title:'发现重复任务',message:'发现 '+duplicates.length+' 项可能与已有任务重复。\n\n可以继续写入全部候选项、跳过重复项，或取消。已有任务不会被修改或删除。'}).then(function(choice){
+        if(choice==='insert')commit(false);
+        else if(choice==='skip')commit(true);
+      });
+      return;
+    }
+    commit(false);
   }
   function v2UpdateCandidate(target){
     var host=target&&target.closest('[data-entry-id][data-candidate-id]');if(!host)return null;
@@ -4903,10 +5278,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var dr=$('aiDrawer'),mask=$('aiDrawerMask');if(!dr||!mask)return;
     v2AIDrawerReturnFocus=document.activeElement;
     dr.classList.add('show');mask.classList.add('show');mask.setAttribute('aria-hidden','false');dr.setAttribute('aria-hidden','false');
+    wbOverlayPush('ai-drawer',closeAIAssistant,function(){return dr.classList.contains('show');});
     renderAIDrawer();setTimeout(function(){if($('aiDrawerClose'))$('aiDrawerClose').focus();},25);
   }
   window.openAIAssistant=openAIAssistant;
   function closeAIAssistant(){
+    wbOverlayDrop('ai-drawer');
     var dr=$('aiDrawer'),mask=$('aiDrawerMask');if(dr)dr.classList.remove('show');if(mask){mask.classList.remove('show');mask.setAttribute('aria-hidden','true');}if(dr)dr.setAttribute('aria-hidden','true');
     var target=v2AIDrawerReturnFocus;v2AIDrawerReturnFocus=null;if(target&&document.contains(target))setTimeout(function(){target.focus();},20);
   }
@@ -5030,17 +5407,42 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     appendWorkLog('unarchive',t,v2Now());
     return true;
   }
+  function v2RefreshAfterDelete(){
+    renderBadges();renderTodos();renderKanban();renderCal();renderOverview();renderAlert();renderReview();renderDoneList();save();v2Render();
+  }
   function v2DeleteTaskWithLog(t,id){
     if(!t)return false;
-    if(!confirm('删除这条正式任务？收件箱原始记录不会受影响。'))return false;
-    appendWorkLog('delete',t,v2Now());
-    data.todos=data.todos.filter(function(x){return x.id!==id;});
+    var index=data.todos.findIndex(function(x){return x.id===id;});
+    if(index<0)return false;
+    // Scoped undo: never roll back unrelated tasks or the entire data object.
+    var originalData=data,removed=data.todos[index],hadFocus=data.focusId===id;
+    var removedReminders=v2ReminderQueue.filter(function(x){return x.id===id;});
+    var log=appendWorkLog('delete',removed,v2Now());
+    data.todos.splice(index,1);
     v2ReminderQueue=v2ReminderQueue.filter(function(x){return x.id!==id;});
-    if(data.focusId===id)data.focusId=null;
+    if(hadFocus)data.focusId=null;
     if(v2EditingTaskId===id){v2EditingTaskId=null;v2HomeAI.task=null;}
-    renderBadges();renderTodos();renderKanban();renderAlert();renderReview();save();v2Render();
+    v2RefreshAfterDelete();
+    toast('已删除任务（收件箱原始记录未删除）',{undo:function(){
+      if(data!==originalData){toast('数据已切换，无法撤销此次删除');return;}
+      if(data.todos.some(function(x){return x.id===id;})){toast('任务已存在，未执行重复恢复');return;}
+      data.todos.splice(Math.min(index,data.todos.length),0,removed);
+      if(log&&Array.isArray(data.workLog))data.workLog=data.workLog.filter(function(x){return x.id!==log.id;});
+      removedReminders.forEach(function(item){
+        if(!v2ReminderQueue.some(function(current){return current.id===item.id&&current.kind===item.kind;}))v2ReminderQueue.push(item);
+      });
+      if(hadFocus&&!data.focusId)data.focusId=id;
+      v2RefreshAfterDelete();
+      toast('已恢复任务及对应工作记录');
+    }});
     return true;
   }
+  // One guarded deletion entry point shared by V2 and legacy list/calendar/kanban.
+  window.wbDeleteTaskSafely=function(id){
+    if(!dataReady())return false;
+    var task=todoById(id);
+    return task?v2DeleteTaskWithLog(task,id):false;
+  };
   function v2TaskBoardAction(id,act){
     var t=todoById(id);if(!t)return;
     if(act==='done')v2CompleteTask(t,true);
@@ -5369,6 +5771,20 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(!count)h+='<div class="reminder-center-empty">暂无提醒。设置任务的提醒、截止提醒或跟进时间后，会集中显示在这里。</div>';
     box.innerHTML=h;box.classList.toggle('show',v2ReminderCenterOpen);box.setAttribute('aria-hidden',v2ReminderCenterOpen?'false':'true');
   }
+  function v2SetReminderOpen(value){
+    v2ReminderCenterOpen=!!value;
+    if(v2ReminderCenterOpen)wbOverlayPush('reminder-center',function(){v2SetReminderOpen(false);},function(){return v2ReminderCenterOpen;});
+    else wbOverlayDrop('reminder-center');
+    var btn=$('btnReminderCenter');if(btn)btn.setAttribute('aria-expanded',v2ReminderCenterOpen?'true':'false');
+    renderV2ReminderCenter();
+  }
+  function v2SetMoreOpen(value){
+    v2MoreOpen=!!value;
+    if(v2MoreOpen)wbOverlayPush('more-menu',function(){v2SetMoreOpen(false);},function(){return v2MoreOpen;});
+    else wbOverlayDrop('more-menu');
+    var m=$('moreMenu');if(m){m.classList.toggle('show',v2MoreOpen);m.setAttribute('aria-hidden',v2MoreOpen?'false':'true');}
+    var b=$('btnMore');if(b)b.setAttribute('aria-expanded',v2MoreOpen?'true':'false');
+  }
   function v2RemoveReminder(id){v2ReminderQueue=v2ReminderQueue.filter(function(x){return x.id!==id;});renderV2ReminderTray();}
   function v2ReminderAction(id,act,minutes){
     var t=todoById(id);if(!t||!v2IsOpen(t)){v2RemoveReminder(id);return;}
@@ -5380,18 +5796,80 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     else if(act==='wake'){t.snoozedUntil=null;t.updatedAt=v2Now();v2RemoveReminder(id);save(true);v2CheckReminders();v2Render();toast('已唤醒提醒');}
   }
   function v2Snooze(id,until){var t=todoById(id);if(!t)return;t.snoozedUntil=until;t.updatedAt=v2Now();v2RemoveReminder(id);save(true);v2Render();toast('已稍后提醒：'+v2DateTimeText(until));}
+  function v2DefaultSnoozeInput(){
+    var now=new Date(),target=new Date(now);
+    target.setHours(18,0,0,0);
+    if(target.getTime()<=now.getTime()){
+      target.setDate(target.getDate()+1);
+      target.setHours(9,0,0,0);
+    }
+    return fmt(target)+'T'+pad(target.getHours())+':'+pad(target.getMinutes());
+  }
   function v2CustomSnooze(id){
-    var raw=window.prompt('输入提醒时间（例如 2026-08-27 18:00）：','');if(raw===null)return;
-    raw=String(raw).trim().replace(' ','T');var d=v2ParseDate(raw);if(!d){toast('时间格式无法识别');return;}v2Snooze(id,d.toISOString());
+    v2PromptModal({
+      title:'自定义稍后提醒',
+      label:'提醒时间',
+      type:'datetime-local',
+      defaultValue:v2DefaultSnoozeInput(),
+      validate:function(value){
+        var d=v2ParseDate(value);
+        return !d||d.getTime()<=Date.now()?'请选择晚于当前时间的提醒时间':'';
+      }
+    }).then(function(value){
+      if(value===null)return;
+      var task=todoById(id),d=v2ParseDate(value);
+      if(task&&d&&d.getTime()>Date.now())v2Snooze(id,d.toISOString());
+    });
   }
 
-  var V2_MODAL_IDS=['quickRecordMask','taskModalMask','aiPreviewMask'];
-  function v2VisibleTopModal(){
-    for(var i=V2_MODAL_IDS.length-1;i>=0;i--){
-      var mask=$(V2_MODAL_IDS[i]);
-      if(mask&&mask.classList.contains('show')&&mask.getAttribute('aria-hidden')!=='true')return mask;
+  var V2_MODAL_IDS=['quickRecordMask','taskModalMask','aiPreviewMask','promptModalMask'];
+  var v2ActivePrompt=null;
+  function v2FinishPrompt(value){
+    if(!v2ActivePrompt)return;
+    var current=v2ActivePrompt;
+    v2ActivePrompt=null;
+    v2CloseModal('promptModalMask');
+    current.resolve(value);
+  }
+  function v2ConfirmPrompt(){
+    if(!v2ActivePrompt)return;
+    var value=$('promptModalInput').value;
+    var error='';
+    if(typeof v2ActivePrompt.validate==='function'){
+      try{error=v2ActivePrompt.validate(value)||'';}
+      catch(_){error='输入校验失败，请检查内容';}
     }
-    return null;
+    if(error){
+      $('promptModalError').textContent=String(error===true?'请检查输入内容':error);
+      $('promptModalInput').setAttribute('aria-invalid','true');
+      $('promptModalInput').focus();
+      return;
+    }
+    v2FinishPrompt(value);
+  }
+  function v2PromptModal(options){
+    var opts=options||{};
+    if(v2ActivePrompt)return Promise.resolve(null);
+    var input=$('promptModalInput');
+    $('promptModalTitle').textContent=String(opts.title||'请输入');
+    $('promptModalLabel').textContent=String(opts.label||'内容');
+    input.type=opts.type==='datetime-local'?'datetime-local':'text';
+    input.value=String(opts.defaultValue==null?'':opts.defaultValue);
+    input.placeholder=String(opts.placeholder||'');
+    input.removeAttribute('aria-invalid');
+    $('promptModalError').textContent='';
+    return new Promise(function(resolve){
+      v2ActivePrompt={resolve:resolve,validate:opts.validate};
+      v2ShowModal('promptModalMask');
+      setTimeout(function(){if(v2ActivePrompt){input.focus();if(input.type==='text')input.select();}},30);
+    });
+  }
+  window.v2PromptModal=v2PromptModal;
+  function v2VisibleTopModal(){
+    var top=wbOverlayStack.length?wbOverlayStack[wbOverlayStack.length-1]:null;
+    if(!top||top.id.indexOf('v2-modal:')!==0)return null;
+    var mask=$(top.id.slice('v2-modal:'.length));
+    return mask&&mask.classList.contains('show')&&mask.getAttribute('aria-hidden')!=='true'?mask:null;
   }
   function v2ModalFocusable(mask){
     if(!mask)return [];
@@ -5410,11 +5888,13 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(top)v2ModalReturnFocusById[id]=document.activeElement;
     else v2ModalReturnFocus=document.activeElement;
     mask.classList.add('show');mask.setAttribute('aria-hidden','false');
+    wbOverlayPush('v2-modal:'+id,function(){if(id==='aiPreviewMask')v2CancelAIConfirm();else if(id==='promptModalMask')v2FinishPrompt(null);else v2CloseModal(id);},function(){return mask.classList.contains('show');});
     setTimeout(function(){if(mask.classList.contains('show'))v2FocusModal(mask);},20);
   }
   function v2CloseModal(id){
     var mask=$(id);if(!mask)return;
     mask.classList.remove('show');mask.setAttribute('aria-hidden','true');
+    wbOverlayDrop('v2-modal:'+id);
     var target=v2ModalReturnFocusById[id]||null;delete v2ModalReturnFocusById[id];
     var remaining=v2VisibleTopModal();
     if(!target&&!remaining){target=v2ModalReturnFocus;v2ModalReturnFocus=null;}
@@ -5459,6 +5939,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     $('taskEditHint').textContent=t?'修改会自动保存':'明确知道要做什么时，在这里直接新建任务';
     v2SyncDueModeField();v2ShowModal('taskModalMask');
   }
+  window.v2OpenNewTask=function(){v2OpenTaskModal(null,false);};
   function v2SaveTaskModal(){
     var title=$('taskEditTitle').value.trim();if(!title){toast('任务名称不能为空');return;}
     var t=todoById(v2EditingTaskId),isNew=!t,stamp=v2Now();
@@ -5579,7 +6060,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var anchor=e.target.closest('[data-v2-anchor]');
     if(anchor){var id=anchor.getAttribute('data-v2-anchor');if(v2Mode!=='home'){switchV2('home');setTimeout(function(){v2ScrollToHomeAnchor(id);},30);}else v2ScrollToHomeAnchor(id);return;}
     var action=e.target.closest('[data-v2-status-action]');
-    if(action&&action.getAttribute('data-v2-status-action')==='reminders'){v2ReminderCenterOpen=true;v2MoreOpen=false;if($('btnReminderCenter'))$('btnReminderCenter').setAttribute('aria-expanded','true');if($('btnMore'))$('btnMore').setAttribute('aria-expanded','false');renderV2ReminderCenter();}
+    if(action&&action.getAttribute('data-v2-status-action')==='reminders'){v2SetMoreOpen(false);v2SetReminderOpen(true);}
   });
   $('v2Content').addEventListener('click',function(e){
     if(e.target.closest('#v2InboxAnalyze')){v2PrepareInbox($('v2InboxText').value,'paste',v2InboxActiveId);return;}
@@ -5593,7 +6074,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var recordOpen=e.target.closest('[data-v2-record-open]');if(recordOpen){v2OpenTaskModal(recordOpen.getAttribute('data-v2-record-open'),false);return;}
     var recordRangeBtn=e.target.closest('[data-v2-record-range]');if(recordRangeBtn){v2RecordRange=recordRangeBtn.getAttribute('data-v2-record-range');v2Render();return;}
     var sourceBtn=e.target.closest('[data-v2-ai-source-id]');if(sourceBtn){v2OpenAISource(sourceBtn.getAttribute('data-v2-ai-source-id'),sourceBtn.getAttribute('data-v2-ai-source-type'));return;}
-    var smart=e.target.closest('[data-v2-smart-target]');if(smart){var smartTarget=smart.getAttribute('data-v2-smart-target'),smartTab=smart.getAttribute('data-v2-smart-tab');if(smartTarget==='reminders'){v2ReminderCenterOpen=true;renderV2ReminderCenter();}else v2Navigate(smartTarget,{tab:smartTab});e.stopPropagation();return;}
+    var smart=e.target.closest('[data-v2-smart-target]');if(smart){var smartTarget=smart.getAttribute('data-v2-smart-target'),smartTab=smart.getAttribute('data-v2-smart-tab');if(smartTarget==='reminders'){v2SetMoreOpen(false);v2SetReminderOpen(true);}else v2Navigate(smartTarget,{tab:smartTab});e.stopPropagation();return;}
     var aiAction=e.target.closest('[data-v2-ai-action]');if(aiAction){var aa=aiAction.getAttribute('data-v2-ai-action'),noticeEntryId=aiAction.getAttribute('data-v2-ai-entry-id')||v2InboxActiveId;if(aa==='settings')openDrawer();else if(aa==='local')v2UseLocalInbox(noticeEntryId);else if(aa==='retry'){var retryEntry=v2FindInbox(noticeEntryId);if(retryEntry)runInboxAIAnalysis(retryEntry.rawText,retryEntry.sourceType,retryEntry.id,{origin:v2InboxAIState.origin||'inbox',showHome:v2InboxAIState.showHome,navigateOnSuccess:v2InboxAIState.origin==='home'||v2InboxAIState.origin==='assistant'});}else if(aa==='planToday')v2RequestPlanToday();else if(aa==='summarizeDay')v2RequestDaySummary();else if(aa==='summarizeWeek')v2RequestWeekSummary();else if(aa==='reviewWeek')v2RequestReviewSummary('week');else if(aa==='reviewMonth')v2RequestReviewSummary('month');return;}
     var planBtn=e.target.closest('[data-v2-plan-apply]');if(planBtn){v2ApplyPlan(planBtn.getAttribute('data-v2-plan-apply'));return;}
     var nav=e.target.closest('[data-v2-nav]');if(nav){var target=nav.getAttribute('data-v2-nav');v2Navigate(target,{tab:nav.getAttribute('data-v2-tab'),view:nav.getAttribute('data-v2-view'),section:nav.getAttribute('data-v2-section'),recordTab:nav.getAttribute('data-v2-record-tab')});return;}
@@ -5683,7 +6164,16 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     v2BoardDragId=null;if(id)v2TaskBoardAction(id,col.getAttribute('data-col')==='done'?'done':'restore');
   });
 
-  $('btnQuickRecord').addEventListener('click',function(){$('quickRecordText').value='';v2ShowModal('quickRecordMask');});
+  function v2OpenQuickRecord(){$('quickRecordText').value='';v2ShowModal('quickRecordMask');}
+  window.v2OpenQuickRecord=v2OpenQuickRecord;
+  var desktopBridge=window.workbench&&window.workbench.desktop;
+  if(desktopBridge&&typeof desktopBridge.onQuickCapture==='function'){
+    desktopBridge.onQuickCapture(function(){
+      if(!loaded||!dataReady()){toast('工作台数据尚未加载完成，请稍后再试');return;}
+      v2OpenQuickRecord();
+    });
+  }
+  $('btnQuickRecord').addEventListener('click',v2OpenQuickRecord);
   $('quickRecordClose').addEventListener('click',function(){v2CloseModal('quickRecordMask');});$('quickRecordCancel').addEventListener('click',function(){v2CloseModal('quickRecordMask');});
   $('quickRecordSave').addEventListener('click',function(){if(v2AddQuickInbox($('quickRecordText').value))$('quickRecordText').value='';});$('quickRecordText').addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('quickRecordSave').click();});
   $('quickRecordAI').addEventListener('click',function(){if(v2AddQuickInboxAI($('quickRecordText').value))$('quickRecordText').value='';});
@@ -5691,13 +6181,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   $('taskAIAssist').addEventListener('click',function(e){var b=e.target.closest('[data-task-ai-action]');if(b){v2TaskAIAction(b.getAttribute('data-task-ai-action'));return;}var use=e.target.closest('[data-task-ai-apply-followup]');if(use){$('taskEditFollowUp').value=v2InputDateTime(use.getAttribute('data-task-ai-apply-followup'));toast('已填入建议跟进时间，请确认后保存');return;}var copy=e.target.closest('[data-task-ai-copy-draft]');if(copy){var draft=$('taskAIResult').innerText.replace(/^可编辑草稿（不会自动发送）\s*/,'').replace(/复制草稿\s*$/,'').trim();copyText(draft);}});
   ['quickRecordMask','taskModalMask'].forEach(function(id){$(id).addEventListener('click',function(e){if(e.target===this)v2CloseModal(id);});});
   $('aiPreviewClose').addEventListener('click',v2CancelAIConfirm);$('aiPreviewCancel').addEventListener('click',v2CancelAIConfirm);$('aiPreviewContinue').addEventListener('click',function(){var pending=v2PendingAI;v2PendingAI=null;v2CloseModal('aiPreviewMask');if(pending&&pending.proceed)pending.proceed();});
-  document.addEventListener('keydown',function(e){
-    if(e.key!=='Escape')return;
-    var mask=v2VisibleTopModal();if(!mask)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    if(mask.id==='aiPreviewMask'){v2CancelAIConfirm();return;}
-    v2CloseModal(mask.id);
-  });
+  $('promptModalClose').addEventListener('click',function(){v2FinishPrompt(null);});
+  $('promptModalCancel').addEventListener('click',function(){v2FinishPrompt(null);});
+  $('promptModalConfirm').addEventListener('click',v2ConfirmPrompt);
+  $('promptModalMask').addEventListener('click',function(e){if(e.target===this)v2FinishPrompt(null);});
+  $('promptModalInput').addEventListener('input',function(){this.removeAttribute('aria-invalid');$('promptModalError').textContent='';});
+  $('promptModalInput').addEventListener('keydown',function(e){if(v2EnterSubmitAllowed(e)){e.preventDefault();v2ConfirmPrompt();}});
   $('btnAIAssistant').addEventListener('click',openAIAssistant);$('aiDrawerClose').addEventListener('click',closeAIAssistant);$('aiDrawerMask').addEventListener('click',closeAIAssistant);
   $('aiDrawerPlan').addEventListener('click',v2RequestPlanToday);$('aiDrawerInbox').addEventListener('click',runInboxAIFromAssistant);$('aiDrawerAsk').addEventListener('click',function(){v2RequestWorkspaceAnswer($('aiDrawerQuery').value);});$('aiDrawerQuery').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();v2RequestWorkspaceAnswer(this.value);}});$('aiDrawerDay').addEventListener('click',v2RequestDaySummary);$('aiDrawerWeek').addEventListener('click',v2RequestWeekSummary);
   $('aiDrawer').addEventListener('click',function(e){
@@ -5707,13 +6196,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var follow=e.target.closest('[data-task-ai-apply-followup]');if(follow){var ft=todoById(v2EditingTaskId);if(ft){ft.followUpAt=follow.getAttribute('data-task-ai-apply-followup');ft.updatedAt=v2Now();save();v2Render();toast('已填入建议跟进时间');}return;}
     var copy=e.target.closest('[data-task-ai-copy-draft]');if(copy){var draft=$('aiDrawerTaskResult').innerText.replace(/^可编辑草稿（不会自动发送）\s*/,'').replace(/复制草稿\s*$/,'').trim();copyText(draft);return;}
   });
-  $('btnReminderCenter').addEventListener('click',function(e){e.stopPropagation();v2ReminderCenterOpen=!v2ReminderCenterOpen;v2MoreOpen=false;var m=$('moreMenu');if(m)m.classList.remove('show');$('btnMore').setAttribute('aria-expanded','false');renderV2ReminderCenter();});
-  $('btnMore').addEventListener('click',function(e){e.stopPropagation();v2MoreOpen=!v2MoreOpen;v2ReminderCenterOpen=false;var c=$('reminderCenter');if(c)c.classList.remove('show');$('btnReminderCenter').setAttribute('aria-expanded','false');var m=$('moreMenu');if(m){m.classList.toggle('show',v2MoreOpen);m.setAttribute('aria-hidden',v2MoreOpen?'false':'true');}this.setAttribute('aria-expanded',v2MoreOpen?'true':'false');});
+  $('btnReminderCenter').addEventListener('click',function(e){e.stopPropagation();var next=!v2ReminderCenterOpen;v2SetMoreOpen(false);v2SetReminderOpen(next);});
+  $('btnMore').addEventListener('click',function(e){e.stopPropagation();var next=!v2MoreOpen;v2SetReminderOpen(false);v2SetMoreOpen(next);});
   (function setupMoreMenu(){var menu=$('moreMenu');if(!menu)return;['btnExport','btnImport','btnLayout'].forEach(function(id){var b=$(id);if(b){b.className='more-item';menu.appendChild(b);}});})();
-  document.addEventListener('click',function(e){if(v2ReminderCenterOpen&&!e.target.closest('.tb-notify-wrap')){v2ReminderCenterOpen=false;renderV2ReminderCenter();}if(v2MoreOpen&&!e.target.closest('.tb-more-wrap')){v2MoreOpen=false;var m=$('moreMenu');if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true');}$('btnMore').setAttribute('aria-expanded','false');}});
-  document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;if($('aiDrawer').classList.contains('show')){closeAIAssistant();return;}if(v2ReminderCenterOpen){v2ReminderCenterOpen=false;renderV2ReminderCenter();return;}if(v2MoreOpen){v2MoreOpen=false;var m=$('moreMenu');if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true');}$('btnMore').setAttribute('aria-expanded','false');}});
+  document.addEventListener('click',function(e){if(v2ReminderCenterOpen&&!e.target.closest('.tb-notify-wrap'))v2SetReminderOpen(false);if(v2MoreOpen&&!e.target.closest('.tb-more-wrap'))v2SetMoreOpen(false);});
   $('v2ReminderTray').addEventListener('click',function(e){var b=e.target.closest('[data-v2-reminder-action]');if(!b)return;var id=b.getAttribute('data-reminder-id'),act=b.getAttribute('data-v2-reminder-action'),t=todoById(id);if(!t)return;if(act==='done'){v2CompleteTask(t,true);v2RemoveReminder(id);save();v2Render();toast('提醒事项已完成');}else if(act==='snooze'){v2Snooze(id,new Date(Date.now()+Number(b.getAttribute('data-minutes')||10)*60000).toISOString());}else if(act==='tomorrow'){var d=new Date();d.setDate(d.getDate()+1);d.setHours(9,0,0,0);v2Snooze(id,d.toISOString());}else if(act==='custom')v2CustomSnooze(id);else if(act==='dismiss')v2RemoveReminder(id);});
-  $('reminderCenter').addEventListener('click',function(e){var open=e.target.closest('[data-v2-reminder-center-open]');if(open){v2OpenTaskModal(open.getAttribute('data-v2-reminder-center-open'),false);v2ReminderCenterOpen=false;renderV2ReminderCenter();return;}var b=e.target.closest('[data-v2-reminder-action]');if(b){v2ReminderAction(b.getAttribute('data-reminder-id'),b.getAttribute('data-v2-reminder-action'),b.getAttribute('data-minutes'));}});
+  $('reminderCenter').addEventListener('click',function(e){var open=e.target.closest('[data-v2-reminder-center-open]');if(open){v2SetReminderOpen(false);v2OpenTaskModal(open.getAttribute('data-v2-reminder-center-open'),false);return;}var b=e.target.closest('[data-v2-reminder-action]');if(b){v2ReminderAction(b.getAttribute('data-reminder-id'),b.getAttribute('data-v2-reminder-action'),b.getAttribute('data-minutes'));}});
 
   setInterval(v2CheckReminders,30000);
   var initialMode=window._pendingV2Mode||'home';if(window._pendingV2Mode)delete window._pendingV2Mode;
