@@ -59,10 +59,10 @@ let undo=null;
 let renders=0;
 const reminders=[{id:'one',kind:'due'},{id:'two',kind:'due'}];
 const sandbox={
-  data:original,v2ReminderQueue:reminders,v2EditingTaskId:null,
+  data:original,window:{},dataReady:()=>true,v2ReminderQueue:reminders,v2EditingTaskId:null,
   v2HomeAI:{task:null},v2Now:()=> '2026-10-18T00:00:00.000Z',
   appendWorkLog(type,t){const log={id:'delete-log-1',type,taskId:t.id};this.data.workLog.push(log);return log;},
-  renderBadges(){renders++;},renderTodos(){},renderKanban(){},renderAlert(){},renderReview(){},save(){},v2Render(){},
+  renderBadges(){renders++;},renderTodos(){},renderKanban(){},renderCal(){},renderOverview(){},renderDoneList(){},renderAlert(){},renderReview(){},save(){},v2Render(){},
   toast(msg,opts){if(opts&&opts.undo)undo=opts.undo;},
 };
 vm.createContext(sandbox);
