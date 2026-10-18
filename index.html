@@ -3589,10 +3589,18 @@ function enterLayout(on){
 var bL=document.getElementById('btnLayout');if(bL)bL.addEventListener('click',function(){enterLayout(!document.body.classList.contains('editing'));});
 var dL=document.getElementById('doneLayout');if(dL)dL.addEventListener('click',function(){enterLayout(false);});
 var rL=document.getElementById('resetLayout');if(rL)rL.addEventListener('click',function(){
-  if(!confirm('将恢复默认布局（五张卡片全部显示、位置尺寸复原）。确定？'))return;
-  data.layout=null;
-  LAYOUT_IDS.forEach(function(id){var c=$(id);if(c)c.classList.remove('off');});
-  applyLayout();save();renderBadges();toast('布局已重置为默认');
+  var sourceData=data,previousLayout=data.layout;
+  wbConfirmModal({title:'恢复默认布局',message:'五张卡片将恢复默认位置和尺寸，任务及日程数据不受影响。',confirmText:'恢复默认'}).then(function(ok){
+    if(!ok||data!==sourceData)return;
+    data.layout=null;
+    LAYOUT_IDS.forEach(function(id){var c=$(id);if(c)c.classList.remove('off');});
+    applyLayout();save();renderBadges();
+    toast('布局已重置为默认',{undo:function(){
+      if(data!==sourceData||data.layout!==null){toast('布局已再次更改，撤销失效');return;}
+      data.layout=previousLayout;applyLayout();save();renderBadges();
+      toast('已恢复之前的布局');
+    }});
+  });
 });
 
 /* 左侧栏导航：首页 / 各模块全屏 */
@@ -3953,12 +3961,29 @@ var bgLive=document.getElementById('bgLivePreview');if(bgLive)bgLive.addEventLis
 buildBgGrid();
 
 function clearSamples(){
-  if(!confirm('将移除演示用的示例待办 / 日程 / 便签，你自己的数据不受影响。确定？'))return;
+  var originalData=data;
+  var tasks=data.todos.map(function(t,i){return {entry:t,index:i};}).filter(function(x){return x.entry.sample;});
+  var events=[];
+  Object.keys(data.events).forEach(function(k){(data.events[k]||[]).forEach(function(e,i){if(e&&e.sample)events.push({day:k,entry:e,index:i});});});
+  var originalNote=data.note,hadNote=!!data.noteSample;
+  if(!tasks.length&&!events.length&&!hadNote){toast('没有需要清理的示例数据');return;}
   data.todos=data.todos.filter(function(t){return !t.sample;});
   Object.keys(data.events).forEach(function(k){data.events[k]=data.events[k].filter(function(e){return !e.sample;});if(!data.events[k].length)delete data.events[k];});
-  if(data.noteSample){data.note='';data.noteSample=false;}
-  renderTodos();renderCal();renderKanban();renderOverview();renderAlert();renderReview();applyProfile();save();
-  toast('已清除示例数据');
+  if(hadNote){data.note='';data.noteSample=false;}
+  function refresh(){renderTodos();renderCal();renderKanban();renderOverview();renderAlert();renderReview();applyProfile();save();if(window.v2Render)window.v2Render();}
+  refresh();
+  toast('已移除示例数据',{undo:function(){
+    if(data!==originalData){toast('数据已切换，撤销失效');return;}
+    tasks.forEach(function(x){
+      if(!data.todos.some(function(t){return t.id===x.entry.id;}))data.todos.splice(Math.min(x.index,data.todos.length),0,x.entry);
+    });
+    events.forEach(function(x){
+      if(!data.events[x.day])data.events[x.day]=[];
+      if(data.events[x.day].indexOf(x.entry)<0)data.events[x.day].splice(Math.min(x.index,data.events[x.day].length),0,x.entry);
+    });
+    if(hadNote&&!data.note&&!data.noteSample){data.note=originalNote;data.noteSample=true;}
+    refresh();toast('已恢复示例数据');
+  }});
 }
 
 /* ===== 命令面板 Ctrl+K ===== */
@@ -4033,18 +4058,27 @@ document.addEventListener('keydown',function(e){
 var bPT=document.getElementById('btnPayTemplate');
 if(bPT)bPT.addEventListener('click',function(e){
   e.stopPropagation();
-  if(!confirm('将导入每月重复的薪酬节点日程：工资发放日(10日)、个税扣缴申报截止(15日)、社保公积金缴纳(20日)。已存在的同名日程自动跳过。继续？'))return;
+  var sourceData=data,created=[];
   var t=new Date(),y=t.getFullYear(),m=t.getMonth(),added=0;
   [['10','工资发放日'],['15','个税扣缴申报截止'],['20','社保公积金缴纳']].forEach(function(p){
     var exist=Object.keys(data.events).some(function(k){return (data.events[k]||[]).some(function(ev){return ev.text===p[1];});});
     if(exist)return;
     var key=y+'-'+pad(m+1)+'-'+p[0];
     if(!data.events[key])data.events[key]=[];
-    data.events[key].push({text:p[1],repeat:'monthly',sample:false});
+    var event={text:p[1],repeat:'monthly',sample:false};
+    data.events[key].push(event);created.push({key:key,event:event});
     added++;
   });
   renderCal();renderOverview();renderBadges();save();
-  toast(added?('已导入 '+added+' 个薪酬节点（每月重复）'):'薪酬节点已存在，无需导入');
+  toast(added?('已导入 '+added+' 个薪酬节点（每月重复）'):'薪酬节点已存在，无需导入',added?{undo:function(){
+    if(data!==sourceData){toast('数据已切换，撤销失效');return;}
+    created.forEach(function(x){
+      var list=data.events[x.key];if(!list)return;
+      var index=list.indexOf(x.event);if(index>=0)list.splice(index,1);
+      if(!list.length)delete data.events[x.key];
+    });
+    renderCal();renderOverview();renderBadges();save();toast('已撤销本次薪酬节点导入');
+  }}:undefined);
 });
 
 /* ===== 周小结一键生成 ===== */
@@ -4706,18 +4740,31 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
   function v2DeleteInboxEntry(entry){
     if(!entry||!v2InboxProcessedKind(entry))return;
-    if(!confirm('本次只删除收件箱原始记录，不会删除已生成任务。\n确认删除这条已处理记录吗？'))return;
-    data.inbox=(data.inbox||[]).filter(function(x){return x.id!==entry.id;});
-    if(v2InboxActiveId===entry.id)v2InboxActiveId=null;
-    save();v2Render();toast('已删除收件箱原始记录，正式任务未受影响');
+    var originalData=data,index=(data.inbox||[]).indexOf(entry),wasActive=v2InboxActiveId===entry.id;
+    if(index<0)return;
+    data.inbox.splice(index,1);
+    if(wasActive)v2InboxActiveId=null;
+    save();v2Render();
+    toast('已删除已处理记录，正式任务未受影响',{undo:function(){
+      if(data!==originalData){toast('数据已切换，撤销失效');return;}
+      if(!v2FindInbox(entry.id))data.inbox.splice(Math.min(index,data.inbox.length),0,entry);
+      if(wasActive&&!v2InboxActiveId)v2InboxActiveId=entry.id;
+      save();v2Render();toast('已恢复收件箱记录');
+    }});
   }
   function v2ClearIgnoredInbox(){
-    var count=(data.inbox||[]).filter(function(x){return x.status==='ignored';}).length;
-    if(!count){toast('没有已忽略的收件箱记录');return;}
-    if(!confirm('将删除全部已忽略的收件箱原始记录。\n未整理记录、正式任务、项目、工作记录和等待事项不会受影响。\n确定继续？'))return;
-    var active=v2InboxActiveId;data.inbox=(data.inbox||[]).filter(function(x){return x.status!=='ignored';});
+    var originalData=data,removed=(data.inbox||[]).map(function(x,i){return {entry:x,index:i};}).filter(function(x){return x.entry.status==='ignored';});
+    if(!removed.length){toast('没有已忽略的收件箱记录');return;}
+    var active=v2InboxActiveId;
+    data.inbox=data.inbox.filter(function(x){return x.status!=='ignored';});
     if(active&&!v2FindInbox(active))v2InboxActiveId=null;
-    save();v2Render();toast('已清理 '+count+' 条已忽略记录');
+    save();v2Render();
+    toast('已清理 '+removed.length+' 条已忽略记录',{undo:function(){
+      if(data!==originalData){toast('数据已切换，撤销失效');return;}
+      removed.forEach(function(x){if(!v2FindInbox(x.entry.id))data.inbox.splice(Math.min(x.index,data.inbox.length),0,x.entry);});
+      if(active&&!v2InboxActiveId)v2InboxActiveId=active;
+      save();v2Render();toast('已恢复已忽略记录');
+    }});
   }
   function renderV2Inbox(){
     v2Header('收件箱','先保留原文，再把明确事项整理成可确认的任务。');
