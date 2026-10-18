@@ -16,6 +16,7 @@ on:
       - tests/p0-installers.test.cjs
       - tests/electron-smoke.cjs
       - tests/run-electron-smoke.cjs
+      - scripts/local-preflight.cjs
       - .github/workflows/p0-static-safety.yml
 jobs:
   check:
@@ -38,6 +39,7 @@ jobs:
           node --check desktop-lifecycle.js
           node tests/p0-safety.test.cjs
           node tests/desktop-lifecycle.test.cjs
+          node scripts/local-preflight.cjs
 
   windows-package:
     runs-on: windows-latest
