@@ -84,7 +84,7 @@ async function main(){
       return (await res.json()).find(x=>x.type==='page'&&x.webSocketDebuggerUrl);
     },65000,'portable debug target');
     session=await openSession(target.webSocketDebuggerUrl);
-    assert.equal(await retry(()=>session.evaluate('typeof loaded!=="undefined" && loaded && dataReady()'),15000,'portable application load'),true);
+    assert.equal(await retry(()=>session.evaluate('typeof loaded!=="undefined" && loaded && dataReady() && typeof window.v2Navigate==="function" && typeof window.v2OpenNewTask==="function"'),15000,'portable application load'),true);
     const expression="(async function(){"+
       "window.v2Navigate('tasks');window.v2OpenNewTask();"+
       "document.getElementById('taskEditTitle').value='PACKAGED CI Task';"+
