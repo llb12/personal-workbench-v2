@@ -67,6 +67,10 @@ jobs:
         env:
           WB_ELECTRON_SMOKE_CASE: corrupt
         run: node tests/run-electron-smoke.cjs
+      - name: Test native import, backup and persistence in isolated Electron
+        env:
+          WB_ELECTRON_SMOKE_CASE: import
+        run: node tests/run-electron-smoke.cjs
       - name: Build unsigned NSIS and portable candidates (no publish)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
