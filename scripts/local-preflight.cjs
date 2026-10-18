@@ -18,26 +18,30 @@ function git(args,required=true){
     if(!required)return null;
     throw new Error('Git read failed for '+args[0]+', exit '+result.status);
   }
-  return result.stdout.trim();
+  return result.stdout;
 }
 function go(){
   if(!fs.existsSync(path.join(root,'.git'))){
     throw new Error('Not a local Git worktree (no .git found)');
   }
-  const head=git(['rev-parse','HEAD']);
-  const branch=git(['branch','--show-current'])||'(detached)';
+  const head=git(['rev-parse','HEAD']).trim();
+  const branch=git(['branch','--show-current']).trim()||'(detached)';
   const tracked=git(['status','--porcelain=v1','-z','--untracked-files=normal']);
-  const changed=tracked.split('\0').filter(Boolean).map(entry=>{
-    const code=entry.slice(0,2);
-    // Git's NUL status may contain two paths for rename; report only status count,
-    // no contents or names that might reveal personal business information.
-    return code;
-  });
-  const candidate=git(['rev-parse','--verify',remoteRef+'^{commit}'],false);
+  const entries=tracked.split('\0').filter(Boolean),changed=[];
+  for(let i=0;i<entries.length;i++){
+    const code=entries[i].slice(0,2);
+    changed.push(code);
+    // In porcelain -z format, a rename/copy has an extra NUL-separated path.
+    if(code.includes('R')||code.includes('C'))i++;
+  }
+  const refResult=git(['rev-parse','--verify',remoteRef+'^{commit}'],false);
+  const candidate=refResult?refResult.trim():null;
   let ancestor=null,delta=null;
   if(candidate){
-    ancestor=git(['merge-base',head,candidate],false);
-    delta=git(['rev-list','--left-right','--count',head+'...'+candidate],false);
+    const ancestorResult=git(['merge-base',head,candidate],false);
+    ancestor=ancestorResult?ancestorResult.trim():null;
+    const countResult=git(['rev-list','--left-right','--count',head+'...'+candidate],false);
+    delta=countResult?countResult.trim():null;
   }
   const result={
     projectPath:root,head,branch,
