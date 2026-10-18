@@ -57,9 +57,11 @@ async function main(){
   assert.ok(runner&&fs.existsSync(runner),'Disposable runner required');
   const pkg=require('../package.json');
   const kind=process.argv[2]||'portable';
-  assert.ok(['portable','unpacked'].includes(kind),'Unexpected binary test target');
+  assert.ok(['portable','unpacked','installed'].includes(kind),'Unexpected binary test target');
   const exe=kind==='unpacked'
     ? path.join(__dirname,'..','release','win-unpacked',pkg.productName+'.exe')
+    : kind==='installed'
+    ? path.resolve(process.env.WB_CI_INSTALLED_EXE||'__missing_installed__')
     : path.join(__dirname,'..','release','Personal_Workbench_Portable_'+pkg.version+'.exe');
   assert.ok(fs.existsSync(exe),'Built '+kind+' binary missing');
   const profile=fs.mkdtempSync(path.join(runner,'wb-packaged-'));
