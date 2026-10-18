@@ -2089,10 +2089,37 @@ window.addEventListener('beforeunload',function(event){
   event.preventDefault();
   event.returnValue='';
 });
-function toast(m,opts){var t=$('toast');var undo=opts&&opts.undo;
-  t.innerHTML='';t.appendChild(document.createTextNode(m));
-  if(undo){var b=document.createElement('button');b.className='toast-undo';b.textContent='撤销';b.onclick=function(){clearTimeout(t._tm);t.classList.remove('show');undo();};t.appendChild(b);}
-  t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(function(){t.classList.remove('show');},undo?5000:2300);}
+/* P0 safety: do not overwrite the Undo action when unrelated toasts appear. */
+var wbToastUndoQueue=[],wbToastActiveUndo=null;
+function wbToastAdvance(){
+  var t=$('toast');clearTimeout(t._tm);
+  wbToastActiveUndo=wbToastUndoQueue.shift()||null;
+  if(!wbToastActiveUndo){t.classList.remove('show');t.replaceChildren();return;}
+  var current=wbToastActiveUndo;
+  t.replaceChildren(document.createTextNode(current.message));
+  var button=document.createElement('button');
+  button.className='toast-undo';button.textContent='撤销';
+  button.onclick=function(){
+    if(wbToastActiveUndo!==current)return;
+    clearTimeout(t._tm);
+    wbToastActiveUndo=null;
+    try{current.undo();}finally{wbToastAdvance();}
+  };
+  t.appendChild(button);t.classList.add('show');
+  t._tm=setTimeout(function(){if(wbToastActiveUndo===current)wbToastAdvance();},7000);
+}
+function toast(m,opts){
+  var t=$('toast'),undo=opts&&opts.undo;
+  if(typeof undo==='function'){
+    wbToastUndoQueue.push({message:String(m),undo:undo});
+    if(!wbToastActiveUndo)wbToastAdvance();
+    return;
+  }
+  if(wbToastActiveUndo)return; // Preserve the visible, time-limited Undo.
+  t.replaceChildren(document.createTextNode(String(m)));
+  t.classList.add('show');clearTimeout(t._tm);
+  t._tm=setTimeout(function(){if(!wbToastActiveUndo)t.classList.remove('show');},2300);
+}
 function rerenderAll(){renderTodos();renderKanban();renderCal();renderOverview();renderAlert();renderReview();renderFocus();renderBadges();}
 var bannerDismissed=false;
 function checkBackupHint(){
