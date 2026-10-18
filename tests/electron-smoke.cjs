@@ -56,6 +56,17 @@ async function smokeRenderer(){
   document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,keyCode:27,which:27}));
   check(!document.getElementById('quickRecordMask').classList.contains('show'),'Second Escape did not close quick record');
 
+  const undone=[];
+  toast('CI First Undo',{undo:function(){undone.push('first');}});
+  toast('CI Routine Notice');
+  check(document.getElementById('toast').textContent.includes('CI First Undo'),'routine toast overwrote Undo');
+  toast('CI Second Undo',{undo:function(){undone.push('second');}});
+  document.querySelector('#toast .toast-undo').click();
+  check(undone.length===1&&undone[0]==='first','first Undo did not execute');
+  check(document.getElementById('toast').textContent.includes('CI Second Undo'),'second Undo did not remain queued');
+  document.querySelector('#toast .toast-undo').click();
+  check(undone.length===2&&undone[1]==='second','second Undo did not execute');
+
   window.v2Navigate('tasks');
   check(document.getElementById('v2TaskSearch')!==null,'task page did not render');
   window.v2OpenNewTask();
