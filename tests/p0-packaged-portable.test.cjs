@@ -56,15 +56,24 @@ async function main(){
   const runner=process.env.RUNNER_TEMP;
   assert.ok(runner&&fs.existsSync(runner),'Disposable runner required');
   const pkg=require('../package.json');
-  const exe=path.join(__dirname,'..','release','Personal_Workbench_Portable_'+pkg.version+'.exe');
-  assert.ok(fs.existsSync(exe),'Built portable binary missing');
+  const kind=process.argv[2]||'portable';
+  assert.ok(['portable','unpacked'].includes(kind),'Unexpected binary test target');
+  const exe=kind==='unpacked'
+    ? path.join(__dirname,'..','release','win-unpacked',pkg.productName+'.exe')
+    : path.join(__dirname,'..','release','Personal_Workbench_Portable_'+pkg.version+'.exe');
+  assert.ok(fs.existsSync(exe),'Built '+kind+' binary missing');
   const profile=fs.mkdtempSync(path.join(runner,'wb-packaged-'));
   const port=await freePort();
   const launchEnv={...process.env};
   delete launchEnv.ELECTRON_RUN_AS_NODE; // Must launch the real graphical Electron app.
   const child=spawn(exe,['--user-data-dir='+profile,'--remote-debugging-port='+port,'--disable-gpu'],{
-    cwd:runner,windowsHide:true,stdio:'ignore',env:launchEnv
+    cwd:runner,windowsHide:true,stdio:['ignore','pipe','pipe'],env:launchEnv
   });
+  let childExit=null,childError=null,stdout='',stderr='';
+  child.on('exit',(code,signal)=>{childExit={code,signal};});
+  child.on('error',e=>{childError=e.code||e.message;});
+  child.stdout.on('data',c=>{if(stdout.length<3000)stdout+=c.toString('utf8');});
+  child.stderr.on('data',c=>{if(stderr.length<3000)stderr+=c.toString('utf8');});
   let session=null;
   try{
     const target=await retry(async()=>{
@@ -89,7 +98,14 @@ async function main(){
     assert.ok(record.taskCount>=1);
     const saved=JSON.parse(fs.readFileSync(path.join(profile,'data.json'),'utf8'));
     assert.ok(saved.todos.some(x=>x.text==='PACKAGED CI Task'));
-    console.log('P0_PACKAGED_PORTABLE_PASS: '+JSON.stringify(record));
+    console.log('P0_PACKAGED_'+kind.toUpperCase()+'_PASS: '+JSON.stringify(record));
+  }catch(error){
+    console.error('P0_PACKAGED_DIAGNOSTICS: '+JSON.stringify({
+      kind,exe:path.basename(exe),pid:child.pid,exit:childExit,
+      spawnError:childError,stdout:stdout.slice(-900),stderr:stderr.slice(-900),
+      userDataCreated:fs.existsSync(path.join(profile,'data.json'))
+    }));
+    throw error;
   }finally{
     if(session)try{session.ws.close();}catch(_){}
     if(child.pid){
