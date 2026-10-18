@@ -5785,7 +5785,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     if(mask.id==='aiPreviewMask'){v2CancelAIConfirm();return;}
     if(mask.id==='promptModalMask'){v2FinishPrompt(null);return;}
     v2CloseModal(mask.id);
-  });
+  }, true);
   $('promptModalClose').addEventListener('click',function(){v2FinishPrompt(null);});
   $('promptModalCancel').addEventListener('click',function(){v2FinishPrompt(null);});
   $('promptModalConfirm').addEventListener('click',v2ConfirmPrompt);
