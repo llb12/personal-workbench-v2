@@ -872,7 +872,7 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-status-item:first-of-type b{color:var(--primary)}
 .v2-status i{width:3px;height:3px;background:var(--muted2);border-radius:50%;opacity:.75;margin:0 3px}
 .v2-content{flex:1;min-height:0;padding-top:1px}
-.v2-home-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.9fr);grid-template-areas:"focus pending" "recent quick" "ai done" "upcoming upcoming";gap:12px 16px;align-items:start;align-content:start}
+.v2-home-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.9fr);grid-template-areas:"focus pending" "quick done";gap:12px 16px;align-items:start;align-content:start}
 .v2-home-grid > .v2-card,.v2-home-grid > .v2-home-compact-status,.v2-home-grid > .v2-home-summary{min-width:0}
 .v2-home-focus{grid-area:focus}
 .v2-home-pending{grid-area:pending}
@@ -1018,7 +1018,7 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .v2-modal-mask{position:fixed;inset:0;z-index:95;background:rgba(20,28,38,.38);display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}.v2-modal-mask.show{display:flex}.v2-modal{width:min(620px,94vw);max-height:min(760px,92vh);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);padding:18px}.v2-capture-modal{width:min(510px,94vw)}.v2-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.v2-modal-kicker{display:block;color:var(--primary);font-size:9.5px;font-weight:800;letter-spacing:1.3px}.v2-modal h3{font-size:17px;margin-top:3px}.v2-close{width:28px;height:28px;border-radius:7px;color:var(--muted);font-size:23px;line-height:1}.v2-close:hover{background:var(--hover);color:var(--text)}.v2-modal-help{color:var(--muted);font-size:12px;line-height:1.65;margin:9px 0 11px}.v2-modal .v2-textarea{min-height:160px}.v2-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;color:var(--muted);font-size:11px}.v2-modal-foot>div{display:flex;gap:8px}.v2-modal-foot button{height:33px}.v2-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:15px}.v2-field{display:flex;flex-direction:column;gap:4px;min-width:0}.v2-field span{font-size:11px;color:var(--muted);font-weight:650}.v2-field .inp{width:100%;height:33px}.v2-field.wide{grid-column:1/-1}.v2-source-box{margin-top:13px;padding:8px 10px;border-radius:8px;background:var(--hover);color:var(--muted);font-size:11px;line-height:1.6;white-space:pre-wrap;max-height:70px;overflow:auto}.v2-source-box:empty{display:none}.v2-reminder-tray{position:fixed;right:22px;bottom:20px;width:min(360px,calc(100vw - 44px));z-index:88;display:flex;flex-direction:column;gap:9px;pointer-events:none}.v2-reminder{pointer-events:auto;background:var(--card);border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line));border-left:4px solid var(--warn);border-radius:12px;box-shadow:var(--shadow-lg);padding:11px 12px}.v2-reminder.is-danger{border-left-color:var(--danger);border-color:color-mix(in srgb,var(--danger) 42%,var(--line))}.v2-reminder-head{display:flex;align-items:center;gap:7px}.v2-reminder-head strong{font-size:12.5px;flex:1}.v2-reminder-head span{color:var(--muted);font-size:10.5px}.v2-reminder-body{font-size:12px;line-height:1.55;margin-top:5px;word-break:break-word}.v2-reminder-sub{color:var(--muted);font-size:11px;margin-top:3px}.v2-reminder-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.v2-reminder-actions button{height:27px;padding:0 8px;border-radius:6px;background:var(--hover);color:var(--muted);font-size:10.5px}.v2-reminder-actions button:hover{background:var(--primary-soft);color:var(--primary)}.v2-reminder-actions button:first-child{background:var(--primary);color:#fff}.v2-reminder-actions button:first-child:hover{background:var(--primary-d)}
 
 @media(max-width:980px){
-  .v2-home-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"focus" "pending" "recent" "quick" "ai" "done" "upcoming"}
+  .v2-home-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"focus" "pending" "quick" "done"}
   .v2-home-grid > .v2-card,.v2-home-grid > .v2-home-compact-status{grid-area:auto;grid-column:1/-1}
   .v2-inbox-layout,.v2-waiting-layout{grid-template-columns:1fr}
   .v2-side-stack{display:grid;grid-template-columns:1fr 1fr}
@@ -1046,6 +1046,17 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .wb-confirm-modal{max-width:470px}
 .wb-confirm-message{padding:13px 0 18px;white-space:pre-line;line-height:1.6;color:var(--text);font-size:13px}
 .wb-confirm-danger{background:var(--danger)!important;color:white!important;border-color:var(--danger)!important}
+.wb-overdue-link{border-color:color-mix(in srgb,var(--danger) 43%,var(--line));color:var(--danger);font-weight:700}
+.wb-overdue-link:hover{background:color-mix(in srgb,var(--danger) 9%,var(--card))}
+.wb-project-quick{padding:9px 14px 13px;border-top:1px solid var(--line2)}
+.wb-project-quick-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px}
+.wb-project-quick-head strong{font-size:12px}
+.wb-project-quick-head button{height:28px}
+.wb-project-quick-row{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;gap:12px;padding:9px 8px;color:var(--text);font-size:12px;border-radius:7px}
+.wb-project-quick-row:hover{background:var(--primary-soft)}
+.wb-project-quick-row span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-project-quick-row span:last-child{white-space:nowrap;color:var(--primary)}
+.wb-project-quick-empty{font-size:11.5px;color:var(--muted);padding:7px 3px}
 </style>
 
 </head>
@@ -4507,7 +4518,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
 (function(){
   var V2_MODES=['home','inbox','tasks','projects','records','review','calendar','note'];
   var V2_LEGACY_MODES={calendar:'cardCal',note:'cardNote'};
-  var V2_TASK_TABS=['today','all','waiting','followup','tbd','completed','archived'];
+  var V2_TASK_TABS=['today','overdue','all','waiting','followup','tbd','completed','archived'];
   var v2Mode='home',v2TaskTab='today',v2TaskView='list',v2InboxSection='pending',v2InboxActiveId=null,v2EditingTaskId=null,v2ModalReturnFocus=null,v2ModalReturnFocusById={};
   var v2AiBusy=false,v2AiNotice='',v2HomeAI={plan:null,summary:null,week:null,ask:null,task:null},v2RecordAI={day:null,week:null},v2ReviewAI={week:null,month:null},v2ProjectAI={};
   var v2InboxAIState={entryId:null,status:'idle',message:'',origin:'',showHome:false};
@@ -5351,10 +5362,11 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     var today=v2TodayTasks(),waiting=v2WaitingTasks(),followup=v2FollowUpTasks(),done=v2DoneToday(),focus=v2HomeFocusTasks(),focusIds=v2HomeFocusIds(focus);
     var attentionIds={};waiting.concat(followup).forEach(function(t){if(t&&t.id)attentionIds[t.id]=true;});
     var allUpcoming=v2Upcoming(focusIds).filter(function(x){return !(x.task&&x.task.id&&attentionIds[x.task.id]);}),upcoming=allUpcoming.slice(0,5),attentionTotal=waiting.length+followup.length+allUpcoming.length;
+    var overdueCount=data.todos.filter(function(t){return v2IsOpen(t)&&!!v2Due(t)&&v2Due(t)<fmt(today0());}).length;
     var h='<div class="v2-home-grid">';
     h+='<article id="v2HomeFocus" class="v2-card primary v2-home-focus"><div class="v2-card-head"><span class="v2-bar"></span><h2>今日重点</h2><p>最多先看 5 项</p><button class="v2-head-action" type="button" data-v2-ai-action="planToday">✨ 帮我安排今天</button><span class="v2-count">'+today.length+' 项</span></div><div class="v2-focus-list">';
     if(!focus.length)h+='<div class="v2-empty compact"><strong>今天还没有安排重点</strong>从收件箱挑一件，或者新建一个明确任务。</div>';else focus.forEach(function(t){h+=v2TaskRowHTML(t,{home:true,reorder:true});});
-    h+='</div>'+(v2HomeAI.plan?'<div class="v2-home-ai-result">'+v2PlanHTML()+'</div>':'')+'<div class="v2-home-actions v2-focus-actions"><button class="btn-ghost" type="button" data-v2-action="open-new-task">新建任务</button><button class="btn-ghost" type="button" data-v2-nav="inbox">从收件箱安排</button><button class="v2-link" type="button" data-v2-nav="tasks" data-v2-tab="today">查看全部</button></div></article>';
+    h+='</div>'+(v2HomeAI.plan?'<div class="v2-home-ai-result">'+v2PlanHTML()+'</div>':'')+'<div class="v2-home-actions v2-focus-actions"><button class="btn-ghost" type="button" data-v2-action="open-new-task">新建任务</button><button class="btn-ghost" type="button" data-v2-nav="inbox">从收件箱安排</button>'+(overdueCount?'<button class="btn-ghost wb-overdue-link" type="button" data-v2-nav="tasks" data-v2-tab="overdue">集中处理逾期 · '+overdueCount+'</button>':'')+'<button class="v2-link" type="button" data-v2-nav="tasks" data-v2-tab="today">查看全部</button></div></article>';
     h+='<article id="v2HomeAttention" class="v2-card v2-home-pending"><div class="v2-card-head"><span class="v2-bar"></span><h2>需要注意</h2><p>逾期、临期、等待与跟进</p><span class="v2-count">'+attentionTotal+' 项</span></div>';
     if(!attentionTotal)h+='<div class="v2-empty compact"><strong>目前没有需要特别留意的事项</strong>继续按今日重点推进即可。</div>';else{
       if(waiting.length)h+='<button id="v2HomeWaiting" class="v2-pending-row v2-pending-link" type="button" data-v2-nav="tasks" data-v2-tab="waiting"><span class="v2-pending-count wait">'+waiting.length+'</span><span class="v2-pending-copy"><strong>等待 · 被动</strong><span>已交给别人，等待结果</span></span><span class="v2-pending-open">查看 →</span></button>';
@@ -5369,11 +5381,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     $('v2Content').innerHTML=h;
   }
 
-  function v2TaskTabLabel(tab){return {today:'今天',all:'全部',waiting:'等待',followup:'跟进',tbd:'时间待定',completed:'已完成',archived:'已归档'}[tab]||'任务';}
+  function v2TaskTabLabel(tab){return {today:'今天',overdue:'逾期',all:'全部',waiting:'等待',followup:'跟进',tbd:'时间待定',completed:'已完成',archived:'已归档'}[tab]||'任务';}
   function v2TaskMatchesTab(t,tab){
     if(tab==='archived')return isArchivedTask(t);
     if(tab==='completed')return !!t.done&&!isArchivedTask(t);
     if(!v2IsOpen(t))return false;
+    if(tab==='overdue')return !!v2Due(t)&&v2Due(t)<fmt(today0());
     if(tab==='today')return !v2IsWaiting(t)&&(t.isToday||v2Due(t)===fmt(today0()));
     if(tab==='waiting')return v2IsWaiting(t);
     if(tab==='followup')return v2IsFollowUp(t);
@@ -5479,7 +5492,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function renderV2TaskPage(){
     var tab=V2_TASK_TABS.indexOf(v2TaskTab)>=0?v2TaskTab:'today';v2TaskTab=tab;
     if(tab==='archived')v2TaskView='list';
-    v2Header('任务','把今天、全部、等待、跟进、时间待定、已完成和已归档收拢在同一处。');
+    v2Header('任务','今天、逾期、等待和跟进集中在一起，打开即可处理。');
     var list=v2TaskListForTab(tab),filterActive=!!(String(v2TaskFilters.keyword||'').trim()||v2TaskFilters.priority||v2TaskFilters.status);
     var h='<div class="v2-page-card"><div class="v2-task-tabs" role="tablist" aria-label="任务筛选">';
     V2_TASK_TABS.forEach(function(item){h+='<button class="v2-task-tab'+(item===tab?' on':'')+'" type="button" role="tab" aria-selected="'+(item===tab?'true':'false')+'" data-v2-task-tab="'+item+'">'+v2TaskTabLabel(item)+'<span>'+v2TaskTabCount(item)+'</span></button>';});
@@ -5518,7 +5531,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   }
 
   function renderV3ProjectStatus(){
-    v2Header('项目','项目只展示当前状态与下一步；所有执行动作统一在任务页面完成。');
+    v2Header('项目','打开项目任务、记录下一步，不必先跳回任务列表。');
     var projects=(data.projects||[]).slice().sort(function(a,b){return (a.done-b.done)||(a.sort||0)-(b.sort||0);});
     var h='<div class="v2-page-card"><div class="v2-page-toolbar"><span class="v2-filter-note">'+projects.filter(function(p){return !p.done;}).length+' 个进行中</span><button class="v2-toolbar-btn" type="button" data-v2-nav="tasks">去任务页面</button></div><div class="core-project-grid">';
     if(!projects.length)h+='<div class="v2-empty"><strong>还没有项目</strong>项目只负责聚合状态；需要执行时请回到任务页面。</div>';
@@ -5529,9 +5542,13 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
       var logs=(data.workLog||[]).filter(function(entry){return String(entry.projectId||entry.snapshot&&entry.snapshot.projectId||'')===String(p.id);}).sort(function(a,b){return (v2ParseDate(b.at)||new Date(0))-(v2ParseDate(a.at)||new Date(0));}).slice(0,4);
       var logHTML=logs.length?'<ul>'+logs.map(function(entry){var t=v3WorkLogView(entry);return '<li>'+esc(v2DateTimeText(entry.at))+' · '+esc(v3WorkLogTypeLabel(entry.type))+' · '+esc(v2TaskTitle(t)||'未命名任务')+'</li>';}).join('')+'</ul>':'<p class="muted">暂无项目工作记录</p>';
       var statusText=(p.done?'已完成':'进行中')+' · 未完成 '+open.length+' · 等待 '+waiting.length+' · 已完成 '+done.length+(p.due?' · 截止 '+v2DateText(p.due,true):'');
+      var projectQuickTasks=open.filter(function(t){return !v2IsWaiting(t);}).sort(v2TaskSort).slice(0,3);
       h+='<article class="core-project'+(p.done?' done':'')+'"><div class="core-project-hd"><span class="proj-dot" style="background:'+esc(p.color||'#4f7cff')+'"></span><span class="core-project-name">'+esc(p.name)+'</span><span class="proj-prog">'+done.length+'/'+total+' · '+pct+'%</span></div><div class="core-progress"><span style="width:'+pct+'%"></span></div>';
       h+='<div class="v2-project-sections"><section class="v2-project-section"><h4>当前状态</h4><p>'+esc(statusText)+'</p></section><section class="v2-project-section"><h4>下一步</h4><p><strong>'+esc(nextText)+'</strong></p></section><section class="v2-project-section"><h4>卡点</h4><p>'+(p.blocker?esc(p.blocker):'当前没有记录卡点')+'</p></section><section class="v2-project-section"><h4>最近工作记录</h4>'+logHTML+'</section></div>';
-      h+='<div class="core-project-add"><button class="btn-ghost" type="button" data-v2-nav="tasks">去任务页面执行</button></div></article>';
+      h+='<div class="wb-project-quick"><div class="wb-project-quick-head"><strong>直接处理项目任务</strong><button type="button" class="btn-ghost" data-v2-project-create-task="'+esc(p.id)+'">+ 新建项目任务</button></div>';
+      if(projectQuickTasks.length)projectQuickTasks.forEach(function(t){h+='<button class="wb-project-quick-row" type="button" data-v2-project-open-task="'+esc(t.id)+'"><span>'+esc(v2TaskTitle(t))+'</span><span>打开 →</span></button>';});
+      else h+='<p class="wb-project-quick-empty">暂时没有待处理任务，可直接新建。</p>';
+      h+='</div></article>';
     });
     h+='</div></div>';$('v2Content').innerHTML=h;
   }
@@ -6065,6 +6082,8 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   $('v2Content').addEventListener('click',function(e){
     if(e.target.closest('#v2InboxAnalyze')){v2PrepareInbox($('v2InboxText').value,'paste',v2InboxActiveId);return;}
     if(e.target.closest('#v2InboxAI')){runInboxAIAnalysis($('v2InboxText').value,'paste',v2InboxActiveId,{origin:'inbox',navigateOnSuccess:false});return;}
+    var quickProjectOpen=e.target.closest('[data-v2-project-open-task]');if(quickProjectOpen){var quickTask=todoById(quickProjectOpen.getAttribute('data-v2-project-open-task'));if(quickTask)v2OpenTaskModal(quickTask.id,false);return;}
+    var quickProjectCreate=e.target.closest('[data-v2-project-create-task]');if(quickProjectCreate){var quickPid=quickProjectCreate.getAttribute('data-v2-project-create-task');if(projectsById()[quickPid]){v2OpenTaskModal(null,false);if($('taskEditProject'))$('taskEditProject').value=quickPid;}return;}
     var projectTaskAction=e.target.closest('[data-v2-project-task-action]');if(projectTaskAction){var projectTask=todoById(projectTaskAction.getAttribute('data-task-id')),projectTaskActionName=projectTaskAction.getAttribute('data-v2-project-task-action');if(projectTask&&projectTaskActionName==='edit')v2OpenTaskModal(projectTask.id,false);else if(projectTask&&projectTaskActionName==='remove'){projectTask.pid=null;projectTask.projectId=null;v2Touch(projectTask);save();v2Render();toast('已移出项目');}else if(projectTask&&projectTaskActionName==='delete'){v2TaskBoardAction(projectTask.id,'del');}return;}
     var projectTaskRow=e.target.closest('[data-v2-project-task-id]');if(projectTaskRow&&!e.target.closest('button,select,input')){v2OpenTaskModal(projectTaskRow.getAttribute('data-v2-project-task-id'),false);return;}
     var recordTabBtn=e.target.closest('[data-v2-record-tab]');if(recordTabBtn){var recordTab=recordTabBtn.getAttribute('data-v2-record-tab');if(recordTab==='records'||recordTab==='review'){v2RecordsTab=recordTab;v2Render();}return;}
