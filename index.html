@@ -1054,9 +1054,35 @@ body:not(.v2-view) #v2Panel{display:none!important}
 .wb-project-quick-head button{height:28px}
 .wb-project-quick-row{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;gap:12px;padding:9px 8px;color:var(--text);font-size:12px;border-radius:7px}
 .wb-project-quick-row:hover{background:var(--primary-soft)}
-.wb-project-quick-row span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wb-project-quick-row span:last-child{white-space:nowrap;color:var(--primary)}
+.wb-project-quick-row > span:first-child{min-width:0}
+.wb-project-quick-row > span:last-child{white-space:nowrap;color:var(--primary)}
 .wb-project-quick-empty{font-size:11.5px;color:var(--muted);padding:7px 3px}
+/* Workbench screenshot review: use vertical space for real tasks, not repeated empty tiles. */
+.v2-home-extra{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.9fr);gap:12px 16px;min-width:0;align-items:start}
+.v2-home-extra>.v2-card{min-width:0}
+.v2-home-extra .v2-week-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.45}
+.v2-home-extra .v2-home-recent .v2-task-title{white-space:normal;overflow-wrap:anywhere}
+.wb-project-board>.core-project-grid{padding:0 12px 12px}
+.wb-project-board-head{padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line2);color:var(--muted);font-size:12px}
+.wb-project-board-head .v2-toolbar-btn{white-space:nowrap}
+.wb-project-summary{padding:11px 13px 6px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--line2)}
+.wb-project-next{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wb-project-next strong{font-size:13px;line-height:1.55;font-weight:700;overflow-wrap:anywhere}
+.wb-project-label{color:var(--muted);font-size:11px;line-height:1.4;flex:none}
+.wb-project-blocker,.wb-project-latest{display:flex;align-items:baseline;gap:10px;min-width:0;padding:8px 9px;border-radius:8px;font-size:11.5px;line-height:1.55}
+.wb-project-blocker{color:var(--danger);background:var(--danger-soft)}
+.wb-project-latest{background:var(--hover);color:var(--muted)}
+.wb-project-blocker>span:last-child,.wb-project-latest>span:last-child{min-width:0;overflow-wrap:anywhere}
+.wb-project-quick{border-top:0;padding-top:9px}
+.wb-project-quick-row{align-items:flex-start;border-bottom:1px solid var(--line2)}
+.wb-project-quick-row:last-child{border-bottom:0}
+.wb-project-quick-row .wb-project-task-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.wb-project-quick-row .wb-project-task-title{display:block;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.5}
+.wb-project-quick-row .wb-project-task-due{display:block;font-size:10.5px;color:var(--muted)}
+.wb-project-quick-row .wb-project-task-due.is-overdue{color:var(--danger);font-weight:700}
+.wb-project-quick-row .wb-project-open{flex:none;padding-top:2px}
+@media(max-width:980px){.v2-home-extra{grid-template-columns:1fr}}
+@media(max-width:700px){.wb-project-board-head{flex-wrap:wrap}.wb-project-blocker,.wb-project-latest{flex-direction:column;gap:3px}}
 </style>
 
 </head>
@@ -5160,7 +5186,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     return h+'</div></article>';
   }
   function v2HomeRecentTasksHTML(tasks){
-    var h='<article class="v2-card v2-home-recent"><div class="v2-card-head"><span class="v2-bar"></span><h2>最近任务</h2><p>按紧急度自动排序</p><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="all">查看全部 →</button><span class="v2-count">'+tasks.length+' 项</span></div><div class="v2-task-list">';
+    var h='<article class="v2-card v2-home-recent"><div class="v2-card-head"><span class="v2-bar"></span><h2>接下来处理</h2><p>今日重点之外的待办</p><button class="v2-head-action" type="button" data-v2-nav="tasks" data-v2-tab="all">查看全部 →</button><span class="v2-count">'+tasks.length+' 项</span></div><div class="v2-task-list">';
     if(!tasks.length)h+='<div class="v2-empty compact"><strong>还没有进行中的任务</strong>从快速记录或新建任务开始。</div>';else tasks.forEach(function(t){h+=v2TaskRowHTML(t,{homeRecent:true});});
     return h+'</div></article>';
   }
@@ -5377,6 +5403,14 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
     h+='</article>';
     h+=v2QuickLinksHTML();
     h+=v2HomeDoneHTML(done);
+    var nextTasks=data.todos.filter(function(t){return v2IsOpen(t)&&!focusIds[t.id]&&!v2IsWaiting(t)&&!v2IsFollowUp(t);}).sort(v2TaskSort).slice(0,4);
+    var weekItems=v2WeekSchedule(focusIds);
+    if(nextTasks.length||weekItems.length){
+      h+='<div class="v2-home-extra">';
+      if(nextTasks.length)h+=v2HomeRecentTasksHTML(nextTasks);
+      if(weekItems.length)h+=v2WeekScheduleHTML(weekItems);
+      h+='</div>';
+    }
     h+='</div>';
     $('v2Content').innerHTML=h;
   }
@@ -5533,7 +5567,7 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
   function renderV3ProjectStatus(){
     v2Header('项目','打开项目任务、记录下一步，不必先跳回任务列表。');
     var projects=(data.projects||[]).slice().sort(function(a,b){return (a.done-b.done)||(a.sort||0)-(b.sort||0);});
-    var h='<div class="v2-page-card"><div class="v2-page-toolbar"><span class="v2-filter-note">'+projects.filter(function(p){return !p.done;}).length+' 个进行中</span><button class="v2-toolbar-btn" type="button" data-v2-nav="tasks">去任务页面</button></div><div class="core-project-grid">';
+    var h='<div class="v2-page-card wb-project-board"><div class="wb-project-board-head"><span>'+projects.filter(function(p){return !p.done;}).length+' 个进行中 · '+projects.length+' 个项目</span><button class="v2-toolbar-btn" type="button" data-v2-nav="tasks">查看全部任务 →</button></div><div class="core-project-grid">';
     if(!projects.length)h+='<div class="v2-empty"><strong>还没有项目</strong>项目只负责聚合状态；需要执行时请回到任务页面。</div>';
     projects.forEach(function(p){
       var items=(data.todos||[]).filter(function(t){return v2TaskProjectId(t)===p.id&&!isArchivedTask(t);}),open=items.filter(v2IsOpen),waiting=open.filter(v2IsWaiting),done=items.filter(function(t){return t.done;}),total=open.length+done.length,pct=total?Math.round(done.length/total*100):0;
@@ -5544,9 +5578,12 @@ if(wxRef){wxRef.addEventListener('click',function(e){e.stopPropagation();refresh
       var statusText=(p.done?'已完成':'进行中')+' · 未完成 '+open.length+' · 等待 '+waiting.length+' · 已完成 '+done.length+(p.due?' · 截止 '+v2DateText(p.due,true):'');
       var projectQuickTasks=open.filter(function(t){return !v2IsWaiting(t);}).sort(v2TaskSort).slice(0,3);
       h+='<article class="core-project'+(p.done?' done':'')+'"><div class="core-project-hd"><span class="proj-dot" style="background:'+esc(p.color||'#4f7cff')+'"></span><span class="core-project-name">'+esc(p.name)+'</span><span class="proj-prog">'+done.length+'/'+total+' · '+pct+'%</span></div><div class="core-progress"><span style="width:'+pct+'%"></span></div>';
-      h+='<div class="v2-project-sections"><section class="v2-project-section"><h4>当前状态</h4><p>'+esc(statusText)+'</p></section><section class="v2-project-section"><h4>下一步</h4><p><strong>'+esc(nextText)+'</strong></p></section><section class="v2-project-section"><h4>卡点</h4><p>'+(p.blocker?esc(p.blocker):'当前没有记录卡点')+'</p></section><section class="v2-project-section"><h4>最近工作记录</h4>'+logHTML+'</section></div>';
+      h+='<div class="wb-project-summary"><div class="wb-project-next"><span class="wb-project-label">下一步</span><strong>'+esc(nextText)+'</strong></div>';
+      if(p.blocker)h+='<div class="wb-project-blocker"><span class="wb-project-label">当前卡点</span><span>'+esc(p.blocker)+'</span></div>';
+      if(logs.length){var lastLog=logs[0],lastTask=v3WorkLogView(lastLog);h+='<div class="wb-project-latest"><span class="wb-project-label">最近进展</span><span>'+esc(v2DateTimeText(lastLog.at))+' · '+esc(v3WorkLogTypeLabel(lastLog.type))+' · '+esc(v2TaskTitle(lastTask)||'未命名任务')+'</span></div>';}
+      h+='</div>';
       h+='<div class="wb-project-quick"><div class="wb-project-quick-head"><strong>直接处理项目任务</strong><button type="button" class="btn-ghost" data-v2-project-create-task="'+esc(p.id)+'">+ 新建项目任务</button></div>';
-      if(projectQuickTasks.length)projectQuickTasks.forEach(function(t){h+='<button class="wb-project-quick-row" type="button" data-v2-project-open-task="'+esc(t.id)+'"><span>'+esc(v2TaskTitle(t))+'</span><span>打开 →</span></button>';});
+      if(projectQuickTasks.length)projectQuickTasks.forEach(function(t){var due=v2Due(t),dueText=due?v2DateText(due,true):(v2DueMode(t)==='tbd'?'时间待定':'');h+='<button class="wb-project-quick-row" type="button" data-v2-project-open-task="'+esc(t.id)+'"><span class="wb-project-task-main"><span class="wb-project-task-title">'+esc(v2TaskTitle(t))+'</span>'+(dueText?'<span class="wb-project-task-due'+(due&&due<fmt(today0())?' is-overdue':'')+'">'+esc((due&&due<fmt(today0())?'逾期 · ':'')+dueText)+'</span>':'')+'</span><span class="wb-project-open">打开 →</span></button>';});
       else h+='<p class="wb-project-quick-empty">暂时没有待处理任务，可直接新建。</p>';
       h+='</div></article>';
     });
