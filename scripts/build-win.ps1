@@ -21,7 +21,7 @@ try {
     throw "npm shim self-test failed: prefix='$prefix'"
   }
 
-  & $builder --win --x64
+  & $builder --config electron-builder.release.json --win --x64 --publish never
   $exitCode = $LASTEXITCODE
   if ($exitCode -ne 0) {
     throw "electron-builder failed with exit code $exitCode"

@@ -1,6 +1,6 @@
 {
   "name": "personal-workbench",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "productName": "个人工作台",
   "description": "个人工作执行助手",
   "main": "main.js",
@@ -9,7 +9,8 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-win.ps1"
+    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-win.ps1",
+    "test": "node tests/run-regressions.cjs"
   },
   "devDependencies": {
     "electron": "43.4.1",
@@ -23,13 +24,22 @@
     "files": [
       "index.html",
       "main.js",
+      "desktop-lifecycle.js",
       "preload.js",
       "ai-adapter.js",
+      "inbox-semantics.js",
+      "work-assistant.js",
       "package.json"
     ],
     "directories": {
       "output": "release"
     },
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "tray/icon.ico"
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
@@ -44,7 +54,7 @@
       ]
     },
     "nsis": {
-      "artifactName": "${productName} Setup ${version}.${ext}",
+      "artifactName": "Personal_Workbench_Setup_${version}.${ext}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
@@ -59,7 +69,7 @@
       "runAfterFinish": false
     },
     "portable": {
-      "artifactName": "${productName} ${version}.${ext}"
+      "artifactName": "Personal_Workbench_Portable_${version}.${ext}"
     }
   }
 }

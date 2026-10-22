@@ -15,15 +15,25 @@ contextBridge.exposeInMainWorld('api', {
 
 // V2.1 的 AI 边界：页面只拿到无密钥的配置状态，实际请求由主进程完成。
 contextBridge.exposeInMainWorld('workbench', {
-  background: {
-    choose: () => ipcRenderer.invoke('background-choose'),
-    remove: (managedPath) => ipcRenderer.invoke('background-remove', managedPath),
-    directory: () => ipcRenderer.invoke('background-directory')
+  weather: { get: (input) => ipcRenderer.invoke('weather-get', input) },
+  pilot: {
+    active: process.argv.includes('--workbench-offline-pilot'),
+    ready: (counts) => ipcRenderer.send('pilot-ready', counts)
+  },
+  desktop: {
+    getSettings: () => ipcRenderer.invoke('desktop-get-settings'),
+    setSettings: (settings) => ipcRenderer.invoke('desktop-set-settings', settings),
+    onQuickCapture: (handler) => {
+      if (typeof handler !== 'function') return () => {};
+      const listener = () => handler();
+      ipcRenderer.on('desktop-quick-capture', listener);
+      return () => ipcRenderer.removeListener('desktop-quick-capture', listener);
+    }
   },
   ai: {
     getConfig: () => ipcRenderer.invoke('ai-get-config'),
     saveConfig: (config) => ipcRenderer.invoke('ai-save-config', config),
-    clearKey: () => ipcRenderer.invoke('ai-clear-key'),
+    clearKey: (confirmed) => ipcRenderer.invoke('ai-clear-key', confirmed === true),
     testConnection: (config) => ipcRenderer.invoke('ai-test-connection', config),
     organizeInbox: (payload) => ipcRenderer.invoke('ai-organize-inbox', payload),
     run: (action, payload) => ipcRenderer.invoke('ai-run-action', { action, payload }),

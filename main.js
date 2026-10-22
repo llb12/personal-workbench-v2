@@ -1,10 +1,17 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage, Tray, Menu, nativeImage, screen, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { pathToFileURL } = require('url');
 const { analyzeInboxWithAI, testAIConnection, runAIAction } = require('./ai-adapter');
+const { createDesktopLifecycle } = require('./desktop-lifecycle');
+const { createWeatherClient } = require('./weather-client');
+const weatherClient = createWeatherClient();
+let pilot = { active: false };
+if ((app.isPackaged && fs.existsSync(path.join(__dirname, 'pilot-mode.json'))) || app.commandLine.hasSwitch('workbench-pilot')) {
+  try { pilot = require('./pilot-runtime').activate(app, session); }
+  catch (_) { console.error('PILOT_START_BLOCKED: use the isolated trial launcher and its protected profile'); app.exit(78); throw new Error('PILOT_START_BLOCKED'); }
+}
 
 // 普通运行使用独立的优化版目录；显式 --user-data-dir 供便携/干净用户测试隔离数据。
 const defaultUserDataPath = app.getPath('userData');
@@ -33,10 +40,6 @@ function aiConfigFile() {
   return path.join(app.getPath('userData'), 'ai-config.json');
 }
 
-function backgroundsDir() {
-  return path.join(app.getPath('userData'), 'backgrounds');
-}
-
 const DEFAULT_AI_CONFIG = {
   enabled: false,
   baseUrl: 'https://api.openai.com/v1',
@@ -50,12 +53,17 @@ const DEFAULT_AI_CONFIG = {
 let volatileAIKey = '';
 
 function readAIConfig() {
+  if (pilot.active) return { ...DEFAULT_AI_CONFIG, enabled: false, privacyMode: 'confirm', offlinePilot: true };
   try {
     const f = aiConfigFile();
     if (!fs.existsSync(f)) return { ...DEFAULT_AI_CONFIG };
     const obj = JSON.parse(fs.readFileSync(f, 'utf8'));
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { ...DEFAULT_AI_CONFIG };
+    const retained = { ...obj };
+    ['apiKey', 'apikey', 'api_key', 'password', 'token', 'secret'].forEach(key => { delete retained[key]; });
     return {
+      ...DEFAULT_AI_CONFIG,
+      ...retained,
       enabled: obj.enabled === true,
       baseUrl: typeof obj.baseUrl === 'string' && obj.baseUrl.trim() ? obj.baseUrl.trim() : DEFAULT_AI_CONFIG.baseUrl,
       model: typeof obj.model === 'string' ? obj.model.trim() : '',
@@ -100,13 +108,16 @@ function publicAIConfig(config) {
     maxHistoryDays: config.maxHistoryDays || DEFAULT_AI_CONFIG.maxHistoryDays,
     maxMessageLength: config.maxMessageLength || DEFAULT_AI_CONFIG.maxMessageLength,
     hasApiKey: !!readAIKey(config),
-    secureStorage: isSecureStorageAvailable()
+    secureStorage: isSecureStorageAvailable(),
+    offlinePilot: !!config.offlinePilot
   };
 }
 
 function saveAIConfig(input) {
+  if (pilot.active) throw new Error('PILOT_OFFLINE');
   const current = readAIConfig();
   const next = {
+    ...current,
     enabled: !!(input && input.enabled),
     baseUrl: input && typeof input.baseUrl === 'string' && input.baseUrl.trim() ? input.baseUrl.trim() : DEFAULT_AI_CONFIG.baseUrl,
     model: input && typeof input.model === 'string' ? input.model.trim() : '',
@@ -116,23 +127,27 @@ function saveAIConfig(input) {
     maxHistoryDays: input && Number.isFinite(Number(input.maxHistoryDays)) ? Math.max(1, Math.min(365, Math.round(Number(input.maxHistoryDays)))) : (current.maxHistoryDays || DEFAULT_AI_CONFIG.maxHistoryDays),
     maxMessageLength: input && Number.isFinite(Number(input.maxMessageLength)) ? Math.max(500, Math.min(20000, Math.round(Number(input.maxMessageLength)))) : (current.maxMessageLength || DEFAULT_AI_CONFIG.maxMessageLength)
   };
-  const suppliedKey = input && typeof input.apiKey === 'string' && input.apiKey.trim();
-  if (input && input.clearApiKey === true) {
-    volatileAIKey = '';
-    delete next.apiKeyCiphertext;
-  } else if (suppliedKey) {
+  const suppliedKey = input && typeof input.apiKey === 'string' ? input.apiKey.trim() : '';
+  if (suppliedKey) {
     if (isSecureStorageAvailable()) {
-      next.apiKeyCiphertext = safeStorage.encryptString(input.apiKey).toString('base64');
+      next.apiKeyCiphertext = safeStorage.encryptString(suppliedKey).toString('base64');
       volatileAIKey = '';
     } else {
       // 不安全时宁可只保留在本次进程内，也不明文写盘。
-      volatileAIKey = input.apiKey;
+      volatileAIKey = suppliedKey;
     }
-  } else if (current.apiKeyCiphertext) {
-    next.apiKeyCiphertext = current.apiKeyCiphertext;
   }
   writeJsonAtomic(aiConfigFile(), next);
   return publicAIConfig({ ...next, apiKeyCiphertext: next.apiKeyCiphertext || '' });
+}
+
+function clearSavedAIKey() {
+  if (pilot.active) throw new Error('PILOT_OFFLINE');
+  volatileAIKey = '';
+  const next = readAIConfig();
+  delete next.apiKeyCiphertext;
+  writeJsonAtomic(aiConfigFile(), next);
+  return publicAIConfig(next);
 }
 
 function aiRequestConfig(input, stored) {
@@ -146,8 +161,23 @@ function aiRequestConfig(input, stored) {
 
 function aiFailure(error, fallback) {
   const code = error && error.code ? error.code : '';
-  if (code === 'AI_NOT_CONFIGURED') return { engine: 'unconfigured', code, message: '尚未配置 AI 整理' };
-  return { engine: 'error', code: code || 'AI_ERROR', message: fallback || 'AI整理失败，原始内容已保留' };
+  if (code === 'AI_NOT_CONFIGURED') return { engine: 'unconfigured', code, message: '尚未配置 AI 助手' };
+  const messages = {
+    AI_CONFIG_INVALID: 'AI 地址或模型名称无效，请检查设置',
+    AI_INSECURE_URL: '仅允许 HTTPS 或本机 HTTP 地址',
+    AI_AUTH_ERROR: 'API Key 无效或没有调用权限，请检查密钥',
+    AI_MODEL_ERROR: '模型不可用或未授权，请检查模型名称和服务权限',
+    AI_REQUEST_INVALID: '请求格式不受 AI 服务支持，请检查接口地址、参数兼容性或上下文长度',
+    AI_QUOTA_ERROR: 'AI 服务当前限流或额度不足，请稍后重试并检查服务额度',
+    AI_RESPONSE_INVALID: 'AI 返回格式不符合要求，自动纠正后仍未通过，请重试或使用本地整理',
+    AI_INVALID_RESPONSE: 'AI 返回内容不完整、格式错误或无法读取',
+    AI_TIMEOUT: 'AI 请求超时，请检查网络或延长超时时间后重试',
+    AI_NETWORK_ERROR: '无法连接 AI 服务，请检查网络及 API 地址',
+    AI_HTTP_ERROR: 'AI 服务返回错误，请稍后重试或检查服务状态',
+    AI_RESPONSE_TOO_LARGE: 'AI 返回内容过大，请分段整理'
+  };
+  if (messages[code]) return { engine: 'error', code, message: messages[code] + '；原始内容已保留' };
+  return { engine: 'error', code: code || 'AI_ERROR', message: fallback || 'AI 操作失败，原始内容已保留' };
 }
 
 const EMPTY = {
@@ -253,6 +283,7 @@ function writeData(data) {
 }
 
 let win = null;
+let desktop = null;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -260,21 +291,27 @@ function createWindow() {
     height: 920,
     minWidth: 520,
     minHeight: 440,
+    ...(desktop ? desktop.getWindowBounds() : {}),
     backgroundColor: '#eef1f5',
     transparent: false,
     autoHideMenuBar: true,
-    title: '个人工作台',
+    title: pilot.active ? '个人工作台 · 隔离试用' : '个人工作台',
     webPreferences: {
+      // Keep reminder timers active while an opted-in user hides the window to the tray.
+      backgroundThrottling: false,
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      additionalArguments: pilot.active ? ['--workbench-offline-pilot'] : [],
       sandbox: false
     }
   });
 
   win.setMenuBarVisibility(false);
+  if (pilot.active) win.webContents.on('page-title-updated', event => event.preventDefault());
   win.loadFile(path.join(__dirname, 'index.html'));
 
+  if (desktop) desktop.attachWindow(win);
   win.on('closed', () => { win = null; });
 }
 
@@ -287,7 +324,16 @@ if (hasSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    desktop = createDesktopLifecycle({
+      app, screen, Tray, Menu, nativeImage, fs, path,
+      // Native tray image must be a real OS file when running from app.asar.
+      iconPath: app.isPackaged
+        ? path.join(process.resourcesPath, 'tray', 'icon.ico')
+        : path.join(__dirname, 'build', 'icon.ico'),
+      getWindow: () => win
+    });
     createWindow();
+    desktop.ensureTray();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -297,8 +343,33 @@ if (hasSingleInstanceLock) {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+app.on('before-quit', () => { if (desktop) desktop.beforeQuit(); });
+app.on('will-quit', () => { if (desktop) desktop.willQuit(); });
 
 // ---- IPC ----
+ipcMain.on('pilot-ready', (event, input) => {
+  if (!pilot.active || !win || event.sender !== win.webContents) return;
+  pilot.audit.ready = true;
+  pilot.audit.counts = {};
+  for (const key of ['schemaVersion', 'tasks', 'projects', 'records', 'inbox']) {
+    const value = input && input[key];
+    if (Number.isSafeInteger(value) && value >= 0) pilot.audit.counts[key] = value;
+  }
+  pilot.persist();
+});
+// Desktop UI settings are intentionally separate from data.json and AI key storage.
+ipcMain.handle('desktop-get-settings', () =>
+  desktop ? desktop.getSettings() : { closeToTray:false, trayAvailable:false, appVersion: app.getVersion() });
+ipcMain.handle('desktop-set-settings', (_event, input) =>
+  desktop ? desktop.setSettings(input) : {ok:false,error:'桌面窗口尚未就绪'});
+ipcMain.handle('weather-get', async (_event, input) => {
+  if (pilot.active) return { ok: false, error: '隔离预览不联网', offline: true };
+  try { return { ok: true, weather: await weatherClient.getWeather(input) }; }
+  catch (error) {
+    const message = String(error && error.message || '');
+    return { ok: false, error: /^(请|未找到|存在|天气|中国|无法连接)/.test(message) && message.length < 100 ? message : '天气服务暂时不可用，请重试' };
+  }
+});
 ipcMain.handle('load-data', () => readData());
 
 ipcMain.handle('save-data', (_evt, data) => writeData(data));
@@ -515,62 +586,6 @@ ipcMain.handle('import-data', async () => {
 
 ipcMain.handle('get-data-path', () => dataFile());
 
-// 自定义背景只复制到应用自己的目录；删除时也只允许删除该目录内的副本。
-function managedBackgroundPath(value) {
-  const base = path.resolve(backgroundsDir());
-  const target = path.resolve(String(value || ''));
-  const relative = path.relative(base, target);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
-  return target;
-}
-
-function backgroundExtension(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  return ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'].includes(ext) ? ext : null;
-}
-
-ipcMain.handle('background-choose', async () => {
-  try {
-    const res = await dialog.showOpenDialog(win, {
-      title: '选择工作台背景图片',
-      properties: ['openFile'],
-      filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }]
-    });
-    if (res.canceled || !res.filePaths || !res.filePaths[0]) return null;
-    const source = res.filePaths[0];
-    const ext = backgroundExtension(source);
-    if (!ext) return { error: '背景图片格式不支持' };
-    const stat = fs.statSync(source);
-    if (!stat.isFile()) return { error: '所选内容不是文件' };
-    if (stat.size > 20 * 1024 * 1024) return { error: '背景图片超过 20 MB' };
-    const dir = backgroundsDir();
-    fs.mkdirSync(dir, { recursive: true });
-    const destination = path.join(dir, 'background-' + Date.now() + '-' + process.pid + ext);
-    fs.copyFileSync(source, destination);
-    return { path: destination, url: pathToFileURL(destination).toString() };
-  } catch (error) {
-    return { error: '背景图片保存失败：' + (error && error.message ? error.message : '未知错误') };
-  }
-});
-
-ipcMain.handle('background-remove', (_evt, value) => {
-  try {
-    const target = managedBackgroundPath(value);
-    if (!target) return { ok: false, error: '只能清除应用管理的背景副本' };
-    if (fs.existsSync(target)) fs.unlinkSync(target);
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: '背景副本清除失败' };
-  }
-});
-
-ipcMain.handle('background-directory', () => {
-  try {
-    fs.mkdirSync(backgroundsDir(), { recursive: true });
-  } catch (_) { /* 目录创建失败由实际上传时反馈 */ }
-  return backgroundsDir();
-});
-
 // ---- AI Provider IPC：密钥只在主进程使用，不进入工作台 data.json ----
 function aiLogFile() {
   return path.join(app.getPath('userData'), 'ai-logs.jsonl');
@@ -601,9 +616,10 @@ ipcMain.handle('ai-save-config', (_evt, input) => {
   }
 });
 
-ipcMain.handle('ai-clear-key', () => {
+ipcMain.handle('ai-clear-key', (_evt, confirmed) => {
+  if (confirmed !== true) return { ok: false, message: '请先确认清除 API Key' };
   try {
-    return { ok: true, config: saveAIConfig({ ...readAIConfig(), clearApiKey: true }) };
+    return { ok: true, config: clearSavedAIKey() };
   } catch (_) {
     return { ok: false, message: 'API Key 清除失败' };
   }
@@ -613,7 +629,8 @@ ipcMain.handle('ai-test-connection', async (_evt, input) => {
   const startedAt = Date.now();
   const stored = readAIConfig();
   const source = input && typeof input === 'object' ? input : {};
-  const apiKey = typeof source.apiKey === 'string' && source.apiKey ? source.apiKey : readAIKey(stored);
+  const formKey = typeof source.apiKey === 'string' ? source.apiKey.trim() : '';
+  const apiKey = formKey || readAIKey(stored);
   if (!apiKey) {
     appendAILog({ action: 'testConnection', success: false, failure: 'AI_NOT_CONFIGURED', model: stored.model, durationMs: Date.now() - startedAt });
     return { ok: false, code: 'AI_NOT_CONFIGURED', message: '尚未配置 AI 整理' };
@@ -693,6 +710,7 @@ ipcMain.handle('parse-notice', async function () {
 
 // 桌面通知：启动时提醒逾期任务与今日日程
 ipcMain.on('notify', (_evt, title, body) => {
+  if (pilot.active) return;
   try {
     if (Notification.isSupported()) new Notification({ title: title || '个人工作台', body: body || '' }).show();
   } catch (e) { /* ignore */ }

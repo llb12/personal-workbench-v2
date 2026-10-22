@@ -1,0 +1,66 @@
+{
+  "appId": "com.personal.workbench.isolated.pilot",
+  "productName": "Personal Workbench Pilot",
+  "asar": true,
+  "compression": "normal",
+  "files": [
+    "index.html",
+    "main.js",
+    "desktop-lifecycle.js",
+    "preload.js",
+    "ai-adapter.js",
+    "inbox-semantics.js",
+    "work-assistant.js",
+    "package.json",
+    "pilot-runtime.js",
+    "pilot-mode.json"
+  ],
+  "directories": {
+    "output": "release/final-isolated-pilot"
+  },
+  "extraResources": [
+    {
+      "from": "build/icon.ico",
+      "to": "tray/icon.ico"
+    }
+  ],
+  "win": {
+    "icon": "build/icon.ico",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      {
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "signExecutable": false
+  },
+  "nsis": {
+    "artifactName": "Personal_Workbench_Pilot_Setup_${version}.${ext}",
+    "installerIcon": "build/icon.ico",
+    "uninstallerIcon": "build/icon.ico",
+    "installerHeaderIcon": "build/icon.ico",
+    "oneClick": false,
+    "perMachine": false,
+    "allowElevation": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": false,
+    "createStartMenuShortcut": false,
+    "shortcutName": "Personal Workbench Pilot",
+    "uninstallDisplayName": "Personal Workbench Pilot",
+    "runAfterFinish": false
+  },
+  "portable": {
+    "artifactName": "Personal_Workbench_Pilot_Portable_${version}.${ext}"
+  },
+  "extraMetadata": {
+    "version": "1.0.4-pilot.1"
+  }
+}
