@@ -91,6 +91,11 @@ function installNodeHttpGuard(transport,protocol){
     allowedNodeHttpRequests++;
     return originalRequest.apply(transport,args);
   };
+  transport.get=function(...args){
+    const request=transport.request(...args);
+    request.end();
+    return request;
+  };
 }
 installNodeHttpGuard(nodeHttp,'http:');
 installNodeHttpGuard(nodeHttps,'https:');
@@ -244,7 +249,7 @@ async function run(){
   },'renderer ready');
   if(scenario==='legacy'){
     const migration=await win.webContents.executeJavaScript("(function(){return {version:data.schemaVersion,tasks:data.todos,projects:data.projects,events:data.events,note:data.note,inbox:data.inbox,workLog:data.workLog}})()",true);
-    assert.equal(migration.version,3);
+    assert.equal(migration.version,4);
     assert.equal(migration.tasks.find(t=>t.id==='legacy-task').waitingFor,'部门反馈');
     assert.equal(migration.tasks.find(t=>t.id==='legacy-task').due,'2027-02-03');
     assert.equal(migration.tasks.find(t=>t.id==='legacy-task').note,'保留此备注');
