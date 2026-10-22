@@ -1,12 +1,14 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage, Tray, Menu, nativeImage, screen, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Notification, safeStorage, Tray, Menu, nativeImage, screen, session, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { analyzeInboxWithAI, testAIConnection, runAIAction } = require('./ai-adapter');
 const { createDesktopLifecycle } = require('./desktop-lifecycle');
 const { createWeatherClient } = require('./weather-client');
 const weatherClient = createWeatherClient();
+const { protectNavigation, protectedIPC } = require('./navigation-policy');
+const { createDataWriter, validateData } = require('./data-persistence');
 let pilot = { active: false };
 if ((app.isPackaged && fs.existsSync(path.join(__dirname, 'pilot-mode.json'))) || app.commandLine.hasSwitch('workbench-pilot')) {
   try { pilot = require('./pilot-runtime').activate(app, session); }
@@ -181,7 +183,7 @@ function aiFailure(error, fallback) {
 }
 
 const EMPTY = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   todos: [],
   projects: [],
   events: {},
@@ -195,6 +197,7 @@ const EMPTY = {
 // 只有成功完成一次数据加载（包括确认文件不存在）后，才允许写入。
 // 读取失败时保持保护态，避免渲染进程把空的初始化数据覆盖到原文件。
 let loadState = 'unknown';
+const dataWriter = createDataWriter({ file: dataFile, fs });
 
 function backupBrokenData(file) {
   try {
@@ -225,6 +228,7 @@ function readData() {
     fs.statSync(f);
   } catch (e) {
     if (e && e.code === 'ENOENT') {
+      dataWriter.prime(null);
       loadState = 'ready';
       return null;
     }
@@ -250,36 +254,16 @@ function readData() {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
     return loadFailure('DATA_CORRUPT', '数据文件根结构无效，已保护原文件；请重试加载或使用备份恢复。', f);
   }
+  const invalid = validateData(obj, true);
+  if (invalid) return loadFailure('DATA_CORRUPT', '数据结构无效，已保护原文件：' + invalid, f);
+  dataWriter.prime(Buffer.from(raw, 'utf8'));
   loadState = 'ready';
   return obj;
 }
 
-function writeData(data) {
-  if (loadState !== 'ready') {
-    return {
-      ok: false,
-      code: 'DATA_WRITE_BLOCKED',
-      error: '数据加载失败，已保护原文件；请先重试加载或恢复可读取的数据。'
-    };
-  }
-  try {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      return { ok: false, error: '保存失败：数据结构无效' };
-    }
-    const f = dataFile();
-    const dir = path.dirname(f);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    // 原子写：先写临时文件再改名，避免写一半掉电导致 JSON 损坏
-    const tmp = f + '.tmp-' + process.pid;
-    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-    fs.renameSync(tmp, f);
-    return { ok: true };
-  } catch (e) {
-    return {
-      ok: false,
-      error: '保存失败：' + (e && e.message ? e.message : '未知错误')
-    };
-  }
+function writeData(data, options) {
+  if (loadState !== 'ready') return { ok: false, code: 'DATA_WRITE_BLOCKED', error: '数据加载失败，已保护原文件；请先重试加载。' };
+  return dataWriter.write(data, options);
 }
 
 let win = null;
@@ -303,10 +287,11 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       additionalArguments: pilot.active ? ['--workbench-offline-pilot'] : [],
-      sandbox: false
+      sandbox: true
     }
   });
 
+  protectNavigation(win.webContents, path.join(__dirname, 'index.html'), pilot.active ? null : url => shell.openExternal(url));
   win.setMenuBarVisibility(false);
   if (pilot.active) win.webContents.on('page-title-updated', event => event.preventDefault());
   win.loadFile(path.join(__dirname, 'index.html'));
@@ -347,7 +332,8 @@ app.on('before-quit', () => { if (desktop) desktop.beforeQuit(); });
 app.on('will-quit', () => { if (desktop) desktop.willQuit(); });
 
 // ---- IPC ----
-ipcMain.on('pilot-ready', (event, input) => {
+const ownIPC = protectedIPC(ipcMain, () => win, path.join(__dirname, 'index.html'));
+ownIPC.on('pilot-ready', (event, input) => {
   if (!pilot.active || !win || event.sender !== win.webContents) return;
   pilot.audit.ready = true;
   pilot.audit.counts = {};
@@ -358,11 +344,11 @@ ipcMain.on('pilot-ready', (event, input) => {
   pilot.persist();
 });
 // Desktop UI settings are intentionally separate from data.json and AI key storage.
-ipcMain.handle('desktop-get-settings', () =>
+ownIPC.handle('desktop-get-settings', () =>
   desktop ? desktop.getSettings() : { closeToTray:false, trayAvailable:false, appVersion: app.getVersion() });
-ipcMain.handle('desktop-set-settings', (_event, input) =>
+ownIPC.handle('desktop-set-settings', (_event, input) =>
   desktop ? desktop.setSettings(input) : {ok:false,error:'桌面窗口尚未就绪'});
-ipcMain.handle('weather-get', async (_event, input) => {
+ownIPC.handle('weather-get', async (_event, input) => {
   if (pilot.active) return { ok: false, error: '隔离预览不联网', offline: true };
   try { return { ok: true, weather: await weatherClient.getWeather(input) }; }
   catch (error) {
@@ -370,15 +356,15 @@ ipcMain.handle('weather-get', async (_event, input) => {
     return { ok: false, error: /^(请|未找到|存在|天气|中国|无法连接)/.test(message) && message.length < 100 ? message : '天气服务暂时不可用，请重试' };
   }
 });
-ipcMain.handle('load-data', () => readData());
+ownIPC.handle('load-data', () => readData());
 
-ipcMain.handle('save-data', (_evt, data) => writeData(data));
+ownIPC.handle('save-data', (_evt, data, options) => writeData(data, options));
 
-ipcMain.on('flush-data', (event, data) => {
+ownIPC.on('flush-data', (event, data) => {
   event.returnValue = writeData(data);
 });
 
-ipcMain.handle('export-data', async (_evt, data) => {
+ownIPC.handle('export-data', async (_evt, data) => {
   const stamp = new Date();
   const pad = n => String(n).padStart(2, '0');
   const name =
@@ -423,7 +409,7 @@ function validateImportData(obj) {
     'accent', 'layout', 'noteSample', 'city', 'weather', 'geo',
     'bgPreset', 'bgCustom', 'bgCustomPath', 'bgIntensity', 'bgBlur', 'bgCardOpacity', 'bgMode', 'focusId', 'snap'
   ];
-  if (obj.schemaVersion !== undefined && (!Number.isInteger(obj.schemaVersion) || obj.schemaVersion < 1 || obj.schemaVersion > 3)) {
+  if (obj.schemaVersion !== undefined && (!Number.isInteger(obj.schemaVersion) || obj.schemaVersion < 1 || obj.schemaVersion > 4)) {
     return 'schemaVersion 无效';
   }
   if (!known.some(key => Object.prototype.hasOwnProperty.call(obj, key))) {
@@ -544,7 +530,7 @@ function validateImportData(obj) {
   return null;
 }
 
-ipcMain.handle('import-data', async () => {
+ownIPC.handle('import-data', async () => {
   if (loadState !== 'ready') {
     return {
       code: 'DATA_WRITE_BLOCKED',
@@ -584,7 +570,7 @@ ipcMain.handle('import-data', async () => {
   }
 });
 
-ipcMain.handle('get-data-path', () => dataFile());
+ownIPC.handle('get-data-path', () => dataFile());
 
 // ---- AI Provider IPC：密钥只在主进程使用，不进入工作台 data.json ----
 function aiLogFile() {
@@ -606,9 +592,9 @@ function appendAILog(entry) {
   } catch (_) { /* 日志失败不能影响正常任务和 AI 返回 */ }
 }
 
-ipcMain.handle('ai-get-config', () => publicAIConfig(readAIConfig()));
+ownIPC.handle('ai-get-config', () => publicAIConfig(readAIConfig()));
 
-ipcMain.handle('ai-save-config', (_evt, input) => {
+ownIPC.handle('ai-save-config', (_evt, input) => {
   try {
     return { ok: true, config: saveAIConfig(input || {}) };
   } catch (_) {
@@ -616,7 +602,7 @@ ipcMain.handle('ai-save-config', (_evt, input) => {
   }
 });
 
-ipcMain.handle('ai-clear-key', (_evt, confirmed) => {
+ownIPC.handle('ai-clear-key', (_evt, confirmed) => {
   if (confirmed !== true) return { ok: false, message: '请先确认清除 API Key' };
   try {
     return { ok: true, config: clearSavedAIKey() };
@@ -625,7 +611,7 @@ ipcMain.handle('ai-clear-key', (_evt, confirmed) => {
   }
 });
 
-ipcMain.handle('ai-test-connection', async (_evt, input) => {
+ownIPC.handle('ai-test-connection', async (_evt, input) => {
   const startedAt = Date.now();
   const stored = readAIConfig();
   const source = input && typeof input === 'object' ? input : {};
@@ -645,7 +631,7 @@ ipcMain.handle('ai-test-connection', async (_evt, input) => {
   }
 });
 
-ipcMain.handle('ai-organize-inbox', async (_evt, payload) => {
+ownIPC.handle('ai-organize-inbox', async (_evt, payload) => {
   const startedAt = Date.now();
   const stored = readAIConfig();
   if (!stored.enabled) {
@@ -674,7 +660,7 @@ ipcMain.handle('ai-organize-inbox', async (_evt, payload) => {
   }
 });
 
-ipcMain.handle('ai-run-action', async (_evt, input) => {
+ownIPC.handle('ai-run-action', async (_evt, input) => {
   const source = input && typeof input === 'object' ? input : {};
   const action = typeof source.action === 'string' ? source.action.trim() : '';
   const stored = readAIConfig();
@@ -703,13 +689,13 @@ ipcMain.handle('ai-run-action', async (_evt, input) => {
   }
 });
 
-ipcMain.handle('parse-notice', async function () {
+ownIPC.handle('parse-notice', async function () {
   // 兼容旧面板的 IPC 名称；V2.1 统一走 window.workbench.ai。
   return { engine: 'disabled', error: 'V2 当前仅使用本地整理预览' };
 });
 
 // 桌面通知：启动时提醒逾期任务与今日日程
-ipcMain.on('notify', (_evt, title, body) => {
+ownIPC.on('notify', (_evt, title, body) => {
   if (pilot.active) return;
   try {
     if (Notification.isSupported()) new Notification({ title: title || '个人工作台', body: body || '' }).show();

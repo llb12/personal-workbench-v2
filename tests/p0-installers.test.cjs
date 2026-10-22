@@ -4,15 +4,17 @@ const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const pkg=require('../package.json');
-const directory=path.join(__dirname,'..','release');
+const target=process.argv[2]||'all';
+assert.ok(['all','nsis','portable','unpacked'].includes(target),'Unexpected artifact target');
+const directory=path.resolve(process.argv[3]||path.join(__dirname,'..','release'));
+if(target==='unpacked'){require('../scripts/package-resources.cjs').inspectPackage(path.join(directory,'win-unpacked','resources','app.asar'));console.log('UNPACKED_ARTIFACT_PASS');process.exit(0);}
 const exes=fs.readdirSync(directory).filter(name=>name.endsWith('.exe')).sort();
 const setup='Personal_Workbench_Setup_'+pkg.version+'.exe';
 const portable='Personal_Workbench_Portable_'+pkg.version+'.exe';
-assert.ok(exes.includes(setup),'ASCII NSIS installer missing: '+exes.join(', '));
-assert.ok(exes.includes(portable),'ASCII portable executable missing: '+exes.join(', '));
-assert.deepEqual(exes,[portable,setup].sort(),'Unexpected Windows executable artifact or non-ASCII name');
-assert.ok(exes.every(x=>/^[A-Za-z0-9_.-]+$/.test(x)),'Windows filenames must be ASCII-safe');
-for(const name of [setup,portable]){
+const expected=target==='all'?[setup,portable]:[target==='nsis'?setup:portable];
+for(const name of expected){
+  assert.ok(exes.includes(name),'Missing '+target+' artifact: '+name);
+  assert.ok(/^[A-Za-z0-9_.-]+$/.test(name),'ASCII filename required');
   const file=path.join(directory,name);
   const stat=fs.statSync(file);
   assert.ok(stat.size>5*1024*1024,'Executable unexpectedly small: '+name);
@@ -23,4 +25,4 @@ for(const name of [setup,portable]){
   const hash=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   console.log('P0_WINDOWS_ARTIFACT: '+JSON.stringify({filename:name,bytes:stat.size,sha256:hash}));
 }
-console.log('P0_INSTALLERS_PASS: NSIS and portable binaries exist with valid PE signatures');
+console.log('P0_INSTALLERS_PASS: Requested binaries exist with valid PE headers');

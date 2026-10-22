@@ -43,7 +43,7 @@
     }
     return /(?:Z|[+-]\d{2}:\d{2})$/.test(raw) && Number.isFinite(Date.parse(raw)) && Date.parse(raw) <= Date.parse(context.referenceInstant);
   }
-  function open(task) { return !!task && !task.done && task.status !== 'done' && task.status !== 'archived'; }
+  function open(task) { return !!task && !task.archived && !task.archivedAt && !task.done && task.status !== 'done' && task.status !== 'archived'; }
   function waiting(task) { return open(task) && task.status === 'waiting'; }
   function due(task) { return task.dueMode === 'none' || task.dueMode === 'tbd' ? '' : date(task.due || task.dueAt); }
   function projectId(item) { return text(item.projectId || item.pid, 100); }

@@ -55,8 +55,8 @@ module.exports = async function pilotCoreUI() {
   click('[data-v2-task-action="complete"][data-task-id="' + task.id + '"]'); check(completes() === 1, 'completion record');
   window.v2Navigate('tasks', { tab: 'completed' }); click('[data-v2-task-action="edit"][data-task-id="' + task.id + '"]'); click('#taskEditSave'); check(completes() === 1, 'duplicate completion record');
   click('[data-v2-task-action="restore"][data-task-id="' + task.id + '"]'); check(!task.done && task.pid === project.id && task.due === later, 'restore relations');
-  openTask(task.id); field('taskEditStatus', 'archived'); click('#taskEditSave');
-  window.v2Navigate('tasks', { tab: 'archived' }); click('[data-v2-task-action="unarchive"][data-task-id="' + task.id + '"]'); check(task.status === 'todo', 'unarchive');
+  openTask(task.id); change('#taskEditArchived', true); click('#taskEditSave'); check(task.archived === true, 'archive flag');
+  window.v2Navigate('tasks', { tab: 'archived' }); click('[data-v2-task-action="unarchive"][data-task-id="' + task.id + '"]'); check(task.status === 'todo' && task.archived === false, 'unarchive preserves underlying status');
   window.v2Navigate('home'); check(find('#v2Content').textContent.includes('今日'), 'home');
   click('#btnQuickRecord'); field('quickRecordText', '明天提交演示汇总；等待演示团队反馈样例，下周一催一下。'); click('#quickRecordAI');
   await wait(() => data.inbox.some(e => e.candidates && e.candidates.length === 2 && e.organizeEngine === 'ai'), 'AI preview');

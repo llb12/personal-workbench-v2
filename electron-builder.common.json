@@ -1,0 +1,28 @@
+{
+  "extends": null,
+  "asar": true,
+  "compression": "normal",
+  "npmRebuild": false,
+  "files": [
+    "index.html",
+    "main.js",
+    "preload.js",
+    "desktop-lifecycle.js",
+    "ai-adapter.js",
+    "inbox-semantics.js",
+    "work-assistant.js",
+    "weather-client.js",
+    "weather-cities.json",
+    "pilot-runtime.js",
+    "package.json",
+    "navigation-policy.js",
+    "data-persistence.js",
+    "task-state.js"
+  ],
+  "extraResources": [
+    {
+      "from": "build/icon.ico",
+      "to": "tray/icon.ico"
+    }
+  ]
+}

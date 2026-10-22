@@ -9,7 +9,7 @@ const {EventEmitter}=require('node:events');
 const {app, BrowserWindow, session}=require('electron');
 const profile=process.env.WB_ELECTRON_SMOKE_PROFILE;
 const scenario=process.env.WB_ELECTRON_SMOKE_CASE||'normal';
-const localOptIn=process.env.WB_ELECTRON_SMOKE_LOCAL==='personal-workbench-p0-integration-20261019';
+const localOptIn=process.env.WORKBENCH_SMOKE_LOCAL==='1';
 const mockUrlText=process.env.WB_ELECTRON_SMOKE_MOCK_URL||'';
 assert.ok(['normal','legacy','corrupt','import','ai','core'].includes(scenario));
 assert.equal(process.platform,'win32');
@@ -17,10 +17,10 @@ if(localOptIn){
   assert.notEqual(process.env.CI,'true','Local smoke must not impersonate CI');
   const projectRoot=path.resolve(__dirname,'..');
   assert.equal(path.resolve(process.env.WB_ELECTRON_SMOKE_PROJECT_ROOT||''),projectRoot,'Local smoke root mismatch');
-  const evidenceRoot=path.join(projectRoot,'.integration-evidence','local-electron-profiles');
-  const relative=path.relative(evidenceRoot,path.resolve(profile||''));
-  assert.ok(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative),'Local profile outside integration evidence');
-  assert.equal(fs.readFileSync(path.join(profile,'local-smoke.guard'),'utf8'),'personal-workbench-p0-integration-20261019','Local profile was not created by this runner');
+  require('../scripts/smoke-profile.cjs').assertSmokeProfile(profile);
+  const marker=JSON.parse(fs.readFileSync(path.join(profile,'local-smoke-marker.json'),'utf8'));
+  assert.equal(marker.kind,'workbench-local-smoke');
+  assert.equal(path.resolve(marker.profile),path.resolve(profile));
 }else{
   assert.equal(process.env.CI,'true');
   assert.ok(profile&&process.env.RUNNER_TEMP,'CI-only profile missing');
@@ -345,9 +345,9 @@ async function smokeAI(win){
   assert.ok(preview.toast.includes('候选预览'),'AI candidate preview confirmation flow was not shown');
   assert.equal(preview.taskWritten,false,'AI candidate bypassed preview and wrote a task');
   await win.webContents.executeJavaScript("window.runInboxAIAnalysis('Local P0 AI HTTP error smoke','paste',null,{origin:'inbox',navigateOnSuccess:false});true",true);
-  await pollUntil(async()=>win.webContents.executeJavaScript("(function(){var n=document.querySelector('.v2-ai-notice strong');return !!(n&&n.textContent.includes('AI 服务拒绝了请求'))})()",true),'AI IPC HTTP error display',15000);
+  await pollUntil(async()=>win.webContents.executeJavaScript("(function(){var n=document.querySelector('.v2-ai-notice strong');return !!(n&&n.textContent.includes('AI 服务返回错误'))})()",true),'AI IPC HTTP error display',15000);
   const failure=await win.webContents.executeJavaScript("(function(){var n=document.querySelector('.v2-ai-notice strong');return {notice:n&&n.textContent,toast:document.getElementById('toast').textContent}})()",true);
-  const expected='AI 服务拒绝了请求，请检查模型、密钥或服务额度；原始内容已保留';
+  const expected='AI 服务返回错误，请稍后重试或检查服务状态；原始内容已保留';
   assert.ok(failure.notice.includes(expected),'Specific HTTP error was not shown in the notice');
   assert.ok(failure.toast.includes(expected),'Specific HTTP error was not shown in the toast');
   assert.equal(allowedNodeHttpRequests,3,'Expected exactly three Node HTTP requests to the local mock');

@@ -16,7 +16,7 @@ function normalizer(root) {
   const begin = start < 0 ? alternate : start;
   const end = html.indexOf('\nvar ', begin + 10);
   if (begin < 0 || end < 0) throw new Error('COMPAT_DEFAULTS_MISSING');
-  const context = { uid: 1, Date, Math, Number, String, Object, Array, JSON, isFinite, console: { log() {}, warn() {}, error() {} } };
+  const context = { WorkbenchTaskState: require('../task-state'), isArchivedTask: t => !!t && (t.archived === true || t.status === 'archived' || !!t.archivedAt), uid: 1, Date, Math, Number, String, Object, Array, JSON, isFinite, console: { log() {}, warn() {}, error() {} } };
   vm.createContext(context);
   vm.runInContext(html.slice(begin, end), context);
   for (const name of ['genId', 'preserveDataFields', 'normalizeAIMeta', 'workLogTaskSnapshot', 'normalizeWorkLogEntry', 'normalize']) {

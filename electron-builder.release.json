@@ -1,14 +1,27 @@
 {
-  "extends": null,
+  "extends": "./electron-builder.common.json",
   "appId": "com.personal.workbench",
   "productName": "个人工作台",
   "asar": true,
   "compression": "normal",
   "electronVersion": "43.4.1",
   "npmRebuild": false,
-  "files": ["index.html", "main.js", "preload.js", "desktop-lifecycle.js", "ai-adapter.js", "inbox-semantics.js", "work-assistant.js", "weather-client.js", "weather-cities.json", "pilot-runtime.js", "package.json"],
-  "directories": { "output": "release/optimized-1.0.5" },
-  "extraResources": [{ "from": "build/icon.ico", "to": "tray/icon.ico" }],
-  "win": { "icon": "build/icon.ico", "target": [{ "target": "portable", "arch": ["x64"] }], "signExecutable": false },
-  "portable": { "artifactName": "Personal_Workbench_Portable_${version}.exe" }
+  "directories": {
+    "output": "release/optimized-1.0.6"
+  },
+  "win": {
+    "icon": "build/icon.ico",
+    "target": [
+      {
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "signExecutable": false
+  },
+  "portable": {
+    "artifactName": "Personal_Workbench_Portable_${version}.exe"
+  }
 }

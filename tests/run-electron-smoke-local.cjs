@@ -1,23 +1,19 @@
 'use strict';
 // Explicit, isolated local Electron smoke. It never sets CI=true and only creates
-// disposable profiles below this integration checkout's evidence directory.
+// fresh physical profiles under the OS temporary directory.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 const {spawn,execFileSync}=require('node:child_process');
 
-const marker='personal-workbench-p0-integration-20261019';
+const marker='1';
+const {createSmokeProfile,assertSmokeProfile}=require('../scripts/smoke-profile.cjs');
 assert.equal(process.platform,'win32','Local Electron smoke must run on Windows');
-assert.equal(process.env.WB_RUN_LOCAL_ELECTRON_SMOKE,marker,'Set the exact local smoke opt-in for this integration checkout');
+assert.equal(process.env.WORKBENCH_SMOKE_LOCAL,marker,'Set WORKBENCH_SMOKE_LOCAL=1 for isolated local smoke');
 const projectRoot=fs.realpathSync(path.resolve(__dirname,'..'));
-assert.equal(projectRoot,path.resolve('C:\\Users\\19101\\Documents\\Codex\\personal-workbench-p0-integration-20261019'),'Unexpected project root');
 assert.notEqual(process.env.CI,'true','Local smoke does not impersonate CI');
-const evidenceRoot=path.join(projectRoot,'.integration-evidence');
-const profileRoot=path.join(evidenceRoot,'local-electron-profiles');
-fs.mkdirSync(profileRoot,{recursive:true});
-assert.equal(fs.lstatSync(profileRoot).isSymbolicLink(),false,'Profile root must not be a link');
-assert.ok(path.relative(evidenceRoot,fs.realpathSync(profileRoot))&&!path.relative(evidenceRoot,fs.realpathSync(profileRoot)).startsWith('..'),'Profile root escaped evidence directory');
+const evidenceRoot=fs.mkdtempSync(path.join(fs.realpathSync(require('node:os').tmpdir()),'wb-local-smoke-evidence-'));
 const electron=require('electron');
 assert.equal(typeof electron,'string','Electron executable path was not resolved');
 const electronExe=path.resolve(electron);
@@ -80,8 +76,7 @@ function writeEvidence(record){
   return file;
 }
 async function runCase(scenario,mockUrl){
-  const profile=fs.mkdtempSync(path.join(profileRoot,'profile-'+scenario+'-'));
-  fs.writeFileSync(path.join(profile,'local-smoke.guard'),marker,{encoding:'utf8',flag:'wx'});
+  const profile=createSmokeProfile();
   const args=[path.join(__dirname,'electron-smoke.cjs'),'--user-data-dir='+profile,'--disable-gpu'];
   const env={...process.env};
   delete env.CI;
@@ -128,6 +123,7 @@ async function runCase(scenario,mockUrl){
     assert.ok(data.inbox.some(item=>item.rawText==='Local P0 AI smoke item；2026年10月20日17:00前提交报告'&&item.status==='candidate'));
     assert.ok(!data.todos.some(item=>item.text==='本地模拟提交报告'||item.title==='本地模拟提交报告'));
   }
+  assertSmokeProfile(profile);
   fs.rmSync(profile,{recursive:true,force:true});
   record.profileCleaned=true;
   record.profileWasDisposable=true;

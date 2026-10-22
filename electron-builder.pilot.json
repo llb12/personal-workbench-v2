@@ -4,26 +4,11 @@
   "asar": true,
   "compression": "normal",
   "files": [
-    "index.html",
-    "main.js",
-    "desktop-lifecycle.js",
-    "preload.js",
-    "ai-adapter.js",
-    "inbox-semantics.js",
-    "work-assistant.js",
-    "package.json",
-    "pilot-runtime.js",
     "pilot-mode.json"
   ],
   "directories": {
     "output": "release/final-isolated-pilot"
   },
-  "extraResources": [
-    {
-      "from": "build/icon.ico",
-      "to": "tray/icon.ico"
-    }
-  ],
   "win": {
     "icon": "build/icon.ico",
     "target": [
@@ -61,6 +46,7 @@
     "artifactName": "Personal_Workbench_Pilot_Portable_${version}.${ext}"
   },
   "extraMetadata": {
-    "version": "1.0.4-pilot.1"
-  }
+    "version": "1.0.6-pilot.1"
+  },
+  "extends": "./electron-builder.common.json"
 }

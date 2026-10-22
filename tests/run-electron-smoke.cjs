@@ -33,7 +33,7 @@ if(scenario==='import'){
   fs.writeFileSync(path.join(profile,'import-source.json'),JSON.stringify(incoming),'utf8');
 }
 const electron=require('electron');
-const args=[path.join(__dirname,'electron-smoke.cjs'),'--user-data-dir='+profile,'--no-sandbox','--disable-gpu'];
+const args=[path.join(__dirname,'electron-smoke.cjs'),'--user-data-dir='+profile,'--disable-gpu'];
 const res=spawnSync(electron,args,{
   cwd:path.join(__dirname,'..'),
   timeout:120000,encoding:'utf8',maxBuffer:8*1024*1024,

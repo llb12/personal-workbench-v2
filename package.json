@@ -1,6 +1,6 @@
 {
   "name": "personal-workbench",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "productName": "个人工作台",
   "description": "个人工作执行助手",
   "main": "main.js",
@@ -21,35 +21,23 @@
     "productName": "个人工作台",
     "asar": true,
     "compression": "normal",
-    "files": [
-      "index.html",
-      "main.js",
-      "desktop-lifecycle.js",
-      "preload.js",
-      "ai-adapter.js",
-      "inbox-semantics.js",
-      "work-assistant.js",
-      "package.json"
-    ],
     "directories": {
       "output": "release"
     },
-    "extraResources": [
-      {
-        "from": "build/icon.ico",
-        "to": "tray/icon.ico"
-      }
-    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -70,6 +58,7 @@
     },
     "portable": {
       "artifactName": "Personal_Workbench_Portable_${version}.${ext}"
-    }
+    },
+    "extends": "./electron-builder.common.json"
   }
 }

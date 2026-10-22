@@ -43,6 +43,7 @@ context.todoById = id => context.data.todos.find(t => t.id === id);
 context.v2AssistantRisks = () => assistant.risks({ currentDate: context.fmt(new TestDate()), timeZone: 'Asia/Shanghai', referenceInstant: new TestDate().toISOString(), tasks: context.data.todos, projects: [], records: [] });
 vm.createContext(context);
 vm.runInContext(extract('wbCalendarNodes', ''), context);
+vm.runInContext(extract('wbDateOnly', ''), context);
 for (const name of ['v2DateOnly', 'v2IsDateOnly', 'v2InputDateTime', 'v2ScheduleDate', 'v2ScheduleTime', 'v2EditedSchedule', 'v2ParseDate', 'v2Tomorrow', 'v2TaskTitle', 'v2IsWaiting', 'v2IsFollowUp', 'v2IsOpen', 'v2Due', 'v2DueMode', 'v2ReminderTargets', 'v2MarkReminder', 'v2ReminderBody', 'v2CenterReminderKey', 'v2ReminderClosed', 'v2SnoozeActive', 'v2CenterSignals', 'v2DismissReminder', 'v2ResetScheduleReminder', 'v2PruneReminderQueue', 'v2CheckReminders', 'v2ReminderCenterItems', 'v2RemoveReminder', 'v2Snooze', 'v2CompleteTask']) vm.runInContext(extract(name), context);
 function task(id, extra = {}) { return { id, title: '演示：' + id, text: '演示：' + id, done: false, status: 'todo', dueMode: 'none', due: null, notificationKeys: [], projectId: 'p', ...extra }; }
 const dated = task('date-only', { status: 'waiting', waitingFor: '演示协调方', followUpAt: '2026-10-20', dueMode: 'fixed', due: '2026-10-20' });

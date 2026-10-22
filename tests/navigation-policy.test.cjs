@@ -1,0 +1,24 @@
+'use strict';
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+const { externalURL, isEntryURL, protectNavigation, trustedSender, protectedIPC } = require('../navigation-policy');
+const entry = path.resolve(__dirname, '..', 'index.html'), url = pathToFileURL(entry).href;
+assert.ok(isEntryURL(url + '#tasks', entry));
+for (const value of ['https://example.com', url + '?remote=1', url + '.evil', 'file:///tmp/index.html']) assert.equal(isEntryURL(value, entry), false);
+for (const value of ['javascript:alert(1)', 'file:///tmp/test', 'https://user:pass@example.com', 'https://example.com\n', 'data:text/html,hello']) assert.equal(externalURL(value), null);
+assert.equal(externalURL('https://example.com/path'), 'https://example.com/path');
+let opener, events = {}, opened = [];
+const frame = { url }, contents = { mainFrame: frame, setWindowOpenHandler(fn) { opener = fn; }, on(name, fn) { events[name] = fn; } };
+protectNavigation(contents, entry, value => opened.push(value));
+assert.deepEqual(opener({ url: 'javascript:alert(1)' }), { action: 'deny' });
+assert.deepEqual(opener({ url: 'https://example.com' }), { action: 'deny' });
+for (const name of Object.keys(events)) { let blocked = false; events[name]({ preventDefault() { blocked = true; } }, 'https://example.com'); assert.ok(blocked); }
+const win = { isDestroyed: () => false, webContents: contents }, good = { sender: contents, senderFrame: frame };
+assert.equal(trustedSender(good, win, entry), true);
+for (const bad of [{ ...good, sender: {} }, { ...good, senderFrame: { url } }, { sender: contents }]) assert.equal(trustedSender(bad, win, entry), false);
+const handlers = {}, ipc = protectedIPC({ handle(k, fn) { handlers[k] = fn; }, on(k, fn) { handlers[k] = fn; } }, () => win, entry);
+let writes = 0; ipc.handle('save', () => ++writes); ipc.on('flush', e => { e.returnValue = ++writes; });
+assert.equal(handlers.save({}).code, 'IPC_SOURCE_REJECTED'); const bad = {}; handlers.flush(bad); assert.equal(bad.returnValue.code, 'IPC_SOURCE_REJECTED'); assert.equal(writes, 0);
+assert.equal(handlers.save(good), 1);
+setImmediate(() => { assert.deepEqual(opened, ['https://example.com/']); console.log('NAVIGATION_PASS: parsed external URLs, denied in-app navigation, owned main-frame IPC only'); });

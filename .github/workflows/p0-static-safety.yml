@@ -2,25 +2,19 @@ name: P0 static safety
 on:
   push:
     branches:
-      - codex/p0-stability-20261018
+      - main
+      - snapshot/**
+      - fix/audit-*
   pull_request:
     paths:
-      - index.html
-      - main.js
-      - preload.js
-      - desktop-lifecycle.js
-      - package.json
-      - tests/p0-safety.test.cjs
-      - tests/desktop-lifecycle.test.cjs
-      - tests/p0-package.test.cjs
-      - tests/p0-installers.test.cjs
-      - tests/p0-packaged-portable.test.cjs
-      - tests/p0-installed-nsis.test.cjs
-      - scripts/create-candidate-bundle.cjs
-      - tests/electron-smoke.cjs
-      - tests/run-electron-smoke.cjs
-      - scripts/local-preflight.cjs
+      - "*.js"
+      - "*.json"
+      - "*.html"
+      - "scripts/**"
+      - "tests/**"
+      - "build/**"
       - .github/workflows/p0-static-safety.yml
+  workflow_dispatch:
 jobs:
   check:
     strategy:
@@ -40,8 +34,7 @@ jobs:
           node --check main.js
           node --check preload.js
           node --check desktop-lifecycle.js
-          node tests/p0-safety.test.cjs
-          node tests/desktop-lifecycle.test.cjs
+          npm test
           node scripts/local-preflight.cjs
 
   windows-package:
